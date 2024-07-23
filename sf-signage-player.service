@@ -1,0 +1,14 @@
+[Unit]
+Description=SF-SIGNAGE-PLAYER
+After=network.target
+
+[Service]
+ExecStart=npm run start >/dev/null &
+WorkingDirectory=~/sf-signage/player/
+StandardOutput=null
+StandardError=inherit
+Restart=always
+user=
+
+[Install]
+WantedBy=multi-user.target

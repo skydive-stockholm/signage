@@ -4,7 +4,17 @@ const axios = require('axios');
 const puppeteer = require('puppeteer');
 const { exec, execSync } = require('node:child_process');
 
-const config = require('./config.json');
+let config = {
+    serverUrl: 'http://localhost:3030',
+    id: 'player1'
+}
+
+try {
+    config = require('./config.json');
+} catch (error) {
+    console.error('No config file found');
+}
+
 const SERVER_URL = config.serverUrl;
 const PLAYER_ID = config.id;
 

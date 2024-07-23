@@ -1,0 +1,14 @@
+[Unit]
+Description=SF-SIGNAGE-SERVER
+After=network.target
+
+[Service]
+ExecStart=npm run start >/dev/null &
+WorkingDirectory=~/sf-signage/server/
+StandardOutput=null
+StandardError=inherit
+Restart=always
+user=
+
+[Install]
+WantedBy=multi-user.target
