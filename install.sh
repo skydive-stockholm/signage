@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# curl -o- https://raw.githubusercontent.com/skydive-stockholm/signage/main/install.sh | bash
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
@@ -53,7 +55,7 @@ npm install -g pm2 || error "Failed to install PM2"
 
 # Clone your project repository
 echo "Cloning project repository..."
-git clone https://github.com/skydive-stockholm/sf-signage.git || error "Failed to clone repository"
+git clone https://github.com/skydive-stockholm/signage.git || error "Failed to clone repository"
 
 # Navigate to project directory
 cd sf-signage || error "Failed to navigate to project directory"
