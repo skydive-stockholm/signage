@@ -47,15 +47,15 @@ function updateCurrentUrls() {
     }
 
     // If no schedule matches, set a default URL
-    if (!currentUrls[player]) {
-      currentUrls[player] = defaultURL;
-    }
+    // if (!currentUrls[player]) {
+    //   currentUrls[player] = defaultURL;
+    // }
   }
 }
 
 app.get('/player/:player_id', (req, res) => {
   const playerId = req.params.player_id;
-  res.json({ url: currentUrls[playerId] || defaultURL });
+  res.json({ url: currentUrls[playerId] || null });
 });
 
 setInterval(updateCurrentUrls, 60000); // Update every minute

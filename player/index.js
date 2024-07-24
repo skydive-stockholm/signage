@@ -4,10 +4,11 @@ const axios = require('axios');
 const puppeteer = require('puppeteer');
 const { exec, execSync } = require('node:child_process');
 
-let config = {
-    serverUrl: 'http://localhost:3030',
-    id: 'player1'
-}
+let config;
+let browser;
+let page;
+let isScreenOn = false;
+let hasCEC = false;
 
 try {
     config = require('./config.json');
@@ -15,13 +16,19 @@ try {
     console.error('No config file found');
 }
 
-const SERVER_URL = config.serverUrl;
-const PLAYER_ID = config.id;
+const SERVER_URL = config.server_ip;
+const PLAYER_ID = config.player_name;
 
-let browser;
-let page;
-let isScreenOn = false;
-let hasCEC = false;
+if (!SERVER_URL) {
+    console.error('Missing server URL in config file');
+    process.exit(1);
+}
+
+if (!PLAYER_ID) {
+    console.error('Missing player ID in config file');
+    process.exit(1);
+}
+
 
 async function initBrowser() {
     browser = await puppeteer.launch({
@@ -34,7 +41,7 @@ async function initBrowser() {
 
 async function getCurrentUrl() {
     try {
-        const response = await axios.get(`${SERVER_URL}/player/${PLAYER_ID}`);
+        const response = await axios.get(`http://${SERVER_URL}/player/${PLAYER_ID}`);
         return response.data.url;
     } catch (error) {
         console.error('Error fetching URL:', error);

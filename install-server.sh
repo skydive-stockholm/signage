@@ -59,6 +59,9 @@ cd sf-signage || error "Failed to navigate to project directory"
 echo "Installing project dependencies..."
 npm install || error "Failed to install project dependencies"
 
+# Copy config file
+cp config.example.js config.js
+
 # Start the application with PM2
 echo "Starting the application with PM2..."
 pm2 start server/index.js || error "Failed to start application with PM2"

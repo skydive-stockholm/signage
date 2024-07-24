@@ -24,6 +24,42 @@ command_exists() {
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 EOF
 
+# Function to prompt for input if arguments are not provided
+prompt_input() {
+    if [ -z "$ip_address" ]; then
+        read -p "Enter server IP address: " ip_address
+    fi
+    if [ -z "$player_name" ]; then
+        read -p "Enter player name: " player_name
+    fi
+}
+
+# Parse command-line arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --ipaddress) ip_address="$2"; shift ;;
+        --playername) player_name="$2"; shift ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# Prompt for input if arguments are not provided
+prompt_input
+
+# Check if config.json exists, if not create it with an empty JSON object
+if [ ! -f server/config.json ]; then
+    echo '{}' > server/config.json
+fi
+
+content="{
+    \"server_ip\": \"$ip_address\",
+    \"player_name\": \"$player_name\"
+}"
+
+# Write updated content back to file
+echo "$content" > server/config.json
+
 # Update package list
 echo "Updating package list..."
 apt-get update || error "Failed to update package list"
