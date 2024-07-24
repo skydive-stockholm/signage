@@ -47,19 +47,6 @@ done
 # Prompt for input if arguments are not provided
 prompt_input
 
-# Check if config.json exists, if not create it with an empty JSON object
-if [ ! -f server/config.json ]; then
-    echo '{}' > server/config.json
-fi
-
-content="{
-    \"server_ip\": \"$ip_address\",
-    \"player_name\": \"$player_name\"
-}"
-
-# Write updated content back to file
-echo "$content" > server/config.json
-
 # Update package list
 echo "Updating package list..."
 apt-get update || error "Failed to update package list"
@@ -90,6 +77,19 @@ git clone https://github.com/skydive-stockholm/signage.git sf-signage || error "
 
 # Navigate to project directory
 cd sf-signage || error "Failed to navigate to project directory"
+
+# Check if config.json exists, if not create it with an empty JSON object
+if [ ! -f server/config.json ]; then
+    echo '{}' > server/config.json
+fi
+
+content="{
+    \"server_ip\": \"$ip_address\",
+    \"player_name\": \"$player_name\"
+}"
+
+# Write updated content back to file
+echo "$content" > server/config.json
 
 # Install project dependencies
 echo "Installing project dependencies..."
