@@ -26,11 +26,11 @@ EOF
 
 # Update package list
 echo "Updating package list..."
-sudo apt-get update || error "Failed to update package list"
+apt-get update || error "Failed to update package list"
 
 # Install necessary packages
 echo "Installing necessary packages..."
-sudo apt-get install -y git curl nodejs npm || error "Failed to install necessary packages"
+apt-get install -y git curl nodejs npm || error "Failed to install necessary packages"
 
 # Install NVM (Node Version Manager)
 echo "Installing NVM..."
