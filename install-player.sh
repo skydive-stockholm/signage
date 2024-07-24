@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# curl -o- https://raw.githubusercontent.com/skydive-stockholm/signage/main/install.sh | bash
-
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
@@ -24,9 +22,6 @@ command_exists() {
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @    INSTALLING SF-SIGNAGE SYSTEM     @
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-If this is not intentional, interrupt this installation and
-verify your environment variables.
 EOF
 
 # Update package list
@@ -66,7 +61,7 @@ npm install || error "Failed to install project dependencies"
 
 # Start the application with PM2
 echo "Starting the application with PM2..."
-pm2 start server/index.js || error "Failed to start application with PM2"
+pm2 start player/index.js || error "Failed to start application with PM2"
 
 # Set up PM2 to start on boot
 echo "Setting up PM2 to start on system boot..."
