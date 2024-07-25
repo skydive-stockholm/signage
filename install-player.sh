@@ -45,7 +45,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Prompt for input if arguments are not provided
-prompt_input()
+prompt_input
 
 # Update package list
 echo "Updating package list..."
@@ -53,7 +53,7 @@ apt-get update || error "Failed to update package list"
 
 # Install necessary packages
 echo "Installing necessary packages..."
-apt-get install -y xserver-xorg xinit x11-xserver-utils unclutter matchbox-window-manager cec-utils git curl nodejs npm || error "Failed to install necessary packages"
+apt-get install -y xserver-xorg xinit x11-xserver-utils unclutter matchbox-window-manager cec-utils git curl nodejs npm fonts-noto-color-emoji || error "Failed to install necessary packages"
 
 # Install chrome
 echo "Installing Chrome..."

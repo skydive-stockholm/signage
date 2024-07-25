@@ -3,6 +3,8 @@
 const axios = require('axios');
 const puppeteer = require('puppeteer');
 const { exec, execSync } = require('node:child_process');
+const fs = require('node:fs').promises;
+const path = require('node:path');
 
 let config;
 let browser;
@@ -19,6 +21,29 @@ try {
 const SERVER_URL = config.server_ip;
 const SERVER_PORT = 3030;
 const PLAYER_ID = config.player_name;
+const MAX_LOG_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+const TIMEOUT = 60 * 1000; // Wait 60 seconds before checking for new content
+const LOG_FILE = path.join(__dirname, 'errors.log');
+
+async function logError(error) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `${timestamp}: ${error.stack || error}\n`;
+
+    try {
+        // Check if file exists and its size
+        const stats = await fs.stat(LOG_FILE).catch(() => ({ size: 0 }));
+
+        if (stats.size > MAX_LOG_SIZE) {
+            // If file is too large, rename it and start a new one
+            await fs.rename(LOG_FILE, `${LOG_FILE}.old`);
+        }
+
+        // Append to the log file
+        await fs.appendFile(LOG_FILE, logMessage);
+    } catch (err) {
+        console.error('Failed to write to log file:', err);
+    }
+}
 
 if (!SERVER_URL) {
     console.error('Missing server URL in config file');
@@ -33,7 +58,14 @@ if (!PLAYER_ID) {
 async function initBrowser() {
     browser = await puppeteer.launch({
         headless: false,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-fullscreen', '--kiosk', '--disable-infobars'],
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--start-fullscreen',
+            '--kiosk',
+            '--disable-infobars',
+            '--autoplay-policy=no-user-gesture-required',
+        ],
         executablePath: '/usr/bin/chromium-browser',
         defaultViewport: null,
         ignoreDefaultArgs: ['--enable-automation'],
@@ -105,26 +137,30 @@ function turnScreenOff() {
 
 
 async function main() {
-    checkCECAvailability();
-    let currentUrl = null;
+    try {
+        checkCECAvailability();
+        let currentUrl = null;
 
-    while (true) {
-        const newUrl = await getCurrentUrl();
+        while (true) {
+            const newUrl = await getCurrentUrl();
 
-        if (newUrl && newUrl !== currentUrl) {
-            console.log(`Switching to ${newUrl}`);
-            if (!isScreenOn && hasCEC) {
-                await turnScreenOn();
+            if (newUrl && newUrl !== currentUrl) {
+                console.log(`Switching to ${newUrl}`);
+                if (!isScreenOn && hasCEC) {
+                    await turnScreenOn();
+                }
+                await openUrlInChrome(newUrl);
+                currentUrl = newUrl;
+            } else if (!newUrl && isScreenOn && hasCEC) {
+                console.log('No scheduled content, turning off screen');
+                await turnScreenOff();
+                currentUrl = null;
             }
-            await openUrlInChrome(newUrl);
-            currentUrl = newUrl;
-        } else if (!newUrl && isScreenOn && hasCEC) {
-            console.log('No scheduled content, turning off screen');
-            await turnScreenOff();
-            currentUrl = null;
-        }
 
-        await new Promise(resolve => setTimeout(resolve, 60000)); // Wait for 1 minute
+            await new Promise(resolve => setTimeout(resolve, TIMEOUT)); // Wait for 1 minute
+        }
+    } catch (error) {
+        await logError(error);
     }
 }
 
