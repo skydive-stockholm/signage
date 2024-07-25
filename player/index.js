@@ -50,7 +50,7 @@ async function getCurrentUrl() {
         return response.data.url;
     } catch (error) {
         console.error('Error fetching URL:', error);
-        return "https://example.com/default";
+        return null;
     }
 }
 
