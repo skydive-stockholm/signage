@@ -26,11 +26,11 @@ EOF
 
 # Update package list
 echo "Updating package list..."
-apt-get update || error "Failed to update package list"
+sudo apt-get update || error "Failed to update package list"
 
 # Install necessary packages
 echo "Installing necessary packages..."
-apt-get install -y git curl nodejs npm || error "Failed to install necessary packages"
+sudo apt-get install -y git curl nodejs npm || error "Failed to install necessary packages"
 
 # Install NVM (Node Version Manager)
 echo "Installing NVM..."
@@ -64,7 +64,7 @@ cp config.example.js config.js
 
 # Start the application with PM2
 echo "Starting the application with PM2..."
-pm2 start server/index.js || error "Failed to start application with PM2"
+pm2 start server/index.js --name signage-player || error "Failed to start application with PM2"
 
 # Set up PM2 to start on boot
 echo "Setting up PM2 to start on system boot..."

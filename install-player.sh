@@ -49,11 +49,15 @@ prompt_input
 
 # Update package list
 echo "Updating package list..."
-apt-get update || error "Failed to update package list"
+sudo apt-get update || error "Failed to update package list"
 
 # Install necessary packages
 echo "Installing necessary packages..."
-apt-get install -y git curl nodejs npm || error "Failed to install necessary packages"
+sudo apt-get install -y xserver-xorg xinit x11-xserver-utils cec-utils git curl nodejs npm || error "Failed to install necessary packages"
+
+# Install chrome
+echo "Installing Chrome..."
+sudo apt install chromium-browser chromium-codecs-ffmpeg
 
 # Install NVM (Node Version Manager)
 echo "Installing NVM..."
@@ -79,8 +83,8 @@ git clone https://github.com/skydive-stockholm/signage.git sf-signage || error "
 cd sf-signage || error "Failed to navigate to project directory"
 
 # Check if config.json exists, if not create it with an empty JSON object
-if [ ! -f server/config.json ]; then
-    echo '{}' > server/config.json
+if [ ! -f player/config.json ]; then
+    echo '{}' > player/config.json
 fi
 
 content="{
@@ -89,22 +93,32 @@ content="{
 }"
 
 # Write updated content back to file
-echo "$content" > server/config.json
+echo "$content" > player/config.json
 
 # Install project dependencies
 echo "Installing project dependencies..."
 npm install || error "Failed to install project dependencies"
 
-# Start the application with PM2
-echo "Starting the application with PM2..."
-pm2 start player/index.js || error "Failed to start application with PM2"
+# Create .xinitrc file
+cat << EOF > "$HOME/.xinitrc"
+#!/bin/bash
 
-# Set up PM2 to start on boot
-echo "Setting up PM2 to start on system boot..."
-pm2 startup || error "Failed to set up PM2 startup script"
+# Hide the cursor
+unclutter -idle 0 &
 
-# Save the current PM2 process list
-echo "Saving the PM2 process list..."
-pm2 save || error "Failed to save PM2 process list"
+# Start the application
+xset s off
+xset -dpms
+xset s noblank
+
+# Start the Node.js application and restart if it crashes
+while true; do
+    matchbox-window-manager -use_titlebar no & unclutter & node player/index.js
+    sleep 1
+done
+EOF
+
+chmod +x "$HOME/.xinitrc"
 
 echo "Installation completed successfully!"
+sudo reboot

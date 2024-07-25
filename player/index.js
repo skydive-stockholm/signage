@@ -17,6 +17,7 @@ try {
 }
 
 const SERVER_URL = config.server_ip;
+const SERVER_PORT = 3030;
 const PLAYER_ID = config.player_name;
 
 if (!SERVER_URL) {
@@ -29,19 +30,22 @@ if (!PLAYER_ID) {
     process.exit(1);
 }
 
-
 async function initBrowser() {
     browser = await puppeteer.launch({
         headless: false,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-fullscreen', '--kiosk'],
-        defaultViewport: null
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-fullscreen', '--kiosk', '--disable-infobars'],
+        defaultViewport: null,
+        ignoreDefaultArgs: ['--enable-automation'],
     });
     page = await browser.newPage();
 }
 
 async function getCurrentUrl() {
     try {
-        const response = await axios.get(`http://${SERVER_URL}/player/${PLAYER_ID}`);
+        const url = `http://${SERVER_URL}:${SERVER_PORT}/player/${PLAYER_ID}`;
+        const response = await axios.get(url);
+        console.log('Fetched URL:', response.data.url)
+        console.log('From:', url)
         return response.data.url;
     } catch (error) {
         console.error('Error fetching URL:', error);
