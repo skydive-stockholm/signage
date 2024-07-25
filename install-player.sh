@@ -19,9 +19,9 @@ command_exists() {
 }
 
 { sf_echo >&2 "$(cat)" ; } << EOF
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@    INSTALLING SF-SIGNAGE SYSTEM     @
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@     ▶ INSTALLING SF-SIGNAGE PLAYER ▶    @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 EOF
 
 # Function to prompt for input if arguments are not provided
@@ -49,15 +49,15 @@ prompt_input
 
 # Update package list
 echo "Updating package list..."
-sudo apt-get update || error "Failed to update package list"
+apt-get update || error "Failed to update package list"
 
 # Install necessary packages
 echo "Installing necessary packages..."
-sudo apt-get install -y xserver-xorg xinit x11-xserver-utils cec-utils git curl nodejs npm || error "Failed to install necessary packages"
+apt-get install -y xserver-xorg xinit x11-xserver-utils cec-utils git curl nodejs npm || error "Failed to install necessary packages"
 
 # Install chrome
 echo "Installing Chrome..."
-sudo apt install chromium-browser chromium-codecs-ffmpeg
+apt-get install chromium-browser chromium-codecs-ffmpeg
 
 # Install NVM (Node Version Manager)
 echo "Installing NVM..."
@@ -70,10 +70,6 @@ export NVM_DIR="$HOME/.nvm"
 # Install version 21 of Node.js
 echo "Installing latest LTS version of Node.js..."
 nvm install 21 || error "Failed to install Node.js"
-
-# Install PM2 globally
-echo "Installing PM2..."
-npm install -g pm2 || error "Failed to install PM2"
 
 # Clone your project repository
 echo "Cloning project repository..."
@@ -100,7 +96,7 @@ echo "Installing project dependencies..."
 npm install || error "Failed to install project dependencies"
 
 # Create .xinitrc file
-cat << EOF > "$HOME/.xinitrc"
+cat << EOF > home/pi/player
 #!/bin/bash
 
 # Hide the cursor
@@ -113,12 +109,24 @@ xset s noblank
 
 # Start the Node.js application and restart if it crashes
 while true; do
-    matchbox-window-manager -use_titlebar no & unclutter & node player/index.js
+    matchbox-window-manager -use_titlebar no & unclutter & node /home/pi/sf-signage/player/index.js
     sleep 1
 done
 EOF
 
-chmod +x "$HOME/.xinitrc"
+chmod +x /home/pi/player
+
+cat << EOF >> /home/pi/.bashrc
+xinit /home/player -- vt$(fgconsole)
+EOF
+
+# Enable auto-login for user "pi"
+sudo raspi-config nonint do_boot_behaviour B2
 
 echo "Installation completed successfully!"
 sudo reboot
+
+# Reboot the machine every morning.
+cat << EOF > /etc/cron.d/reboot
+30 07 * * * reboot
+EOF
