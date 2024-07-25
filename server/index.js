@@ -2,20 +2,21 @@
 
 const express = require('express');
 const moment = require('moment');
-const config = require("./config");
+const fs = require('node:fs');
 
 const app = express();
 const port = 3030;
-const defaultURL = config.defaultUrl;
-
-// Sample configuration with days parameter
-const players = config.players;
-
 let currentUrls = {};
 
-function updateCurrentUrls() {
+async function updateCurrentUrls() {
+  console.log('Updating URLs...')
   const now = moment();
   const currentDay = now.day(); // 0 (Sunday) to 6 (Saturday)
+
+  const config = JSON.parse(fs.readFileSync(__dirname + '/config.json', 'utf8'));
+
+  // const config = require("./config");
+  const players = config.players;
 
   for (const [player, schedules] of Object.entries(players)) {
     for (const schedule of schedules) {
@@ -55,10 +56,16 @@ function updateCurrentUrls() {
 
 app.get('/player/:player_id', (req, res) => {
   const playerId = req.params.player_id;
-  res.json({ url: currentUrls[playerId] || null });
+  let url = currentUrls[playerId];
+
+  if (!url) {
+    res.status(404).json({ error: 'Player not found' });
+  }
+
+  res.json({ url: url || null });
 });
 
-setInterval(updateCurrentUrls, 60000); // Update every minute
+setInterval(updateCurrentUrls, 10000); // Update every 10 seconds
 updateCurrentUrls(); // Initial update
 
 app.listen(port, () => {

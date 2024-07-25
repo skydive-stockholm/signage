@@ -45,7 +45,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Prompt for input if arguments are not provided
-prompt_input
+prompt_input()
 
 # Update package list
 echo "Updating package list..."
@@ -53,7 +53,7 @@ apt-get update || error "Failed to update package list"
 
 # Install necessary packages
 echo "Installing necessary packages..."
-apt-get install -y xserver-xorg xinit x11-xserver-utils cec-utils git curl nodejs npm || error "Failed to install necessary packages"
+apt-get install -y xserver-xorg xinit x11-xserver-utils unclutter matchbox-window-manager cec-utils git curl nodejs npm || error "Failed to install necessary packages"
 
 # Install chrome
 echo "Installing Chrome..."
@@ -96,7 +96,7 @@ echo "Installing project dependencies..."
 npm install || error "Failed to install project dependencies"
 
 # Create .xinitrc file
-cat << EOF > home/pi/player
+cat << EOF > /home/pi/player
 #!/bin/bash
 
 # Hide the cursor
@@ -117,16 +117,17 @@ EOF
 chmod +x /home/pi/player
 
 cat << EOF >> /home/pi/.bashrc
-xinit /home/player -- vt$(fgconsole)
+xinit /home/pi/player -- vt$(fgconsole)
 EOF
 
 # Enable auto-login for user "pi"
 sudo raspi-config nonint do_boot_behaviour B2
 
 echo "Installation completed successfully!"
-sudo reboot
 
 # Reboot the machine every morning.
 cat << EOF > /etc/cron.d/reboot
 30 07 * * * reboot
 EOF
+
+sudo reboot

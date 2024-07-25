@@ -1,4 +1,5 @@
-module.exports = {
+{
+  "defaultUrl": "https://example.com/default",
   "players": {
     "player1": [
       { "url": "http://192.168.55.200", "start_time": "08:00", "end_time": "20:00", "days": [1, 2, 3, 4, 5] },

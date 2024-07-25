@@ -34,6 +34,7 @@ async function initBrowser() {
     browser = await puppeteer.launch({
         headless: false,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-fullscreen', '--kiosk', '--disable-infobars'],
+        executablePath: '/usr/bin/chromium-browser',
         defaultViewport: null,
         ignoreDefaultArgs: ['--enable-automation'],
     });
