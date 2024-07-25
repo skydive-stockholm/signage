@@ -15,8 +15,10 @@ async function updateCurrentUrls() {
 
   const config = JSON.parse(fs.readFileSync(__dirname + '/config.json', 'utf8'));
 
-  // const config = require("./config");
   const players = config.players;
+
+  // Reset current URLs
+  currentUrls = {};
 
   for (const [player, schedules] of Object.entries(players)) {
     for (const schedule of schedules) {
@@ -60,9 +62,9 @@ app.get('/player/:player_id', (req, res) => {
 
   if (!url) {
     res.status(404).json({ error: 'Player not found' });
+  } else {
+    res.json({ url: url || null });
   }
-
-  res.json({ url: url || null });
 });
 
 setInterval(updateCurrentUrls, 10000); // Update every 10 seconds
