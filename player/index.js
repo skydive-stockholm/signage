@@ -58,7 +58,7 @@ async function openUrlInChrome(url) {
     if (!page) {
         await initBrowser();
     }
-    await page.goto(url, { waitUntil: 'networkidle0' });
+    await page.goto(url, { waitUntil: 'load', timeout: 0});
 }
 
 // Check if cec-client is available
