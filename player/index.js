@@ -1,10 +1,7 @@
-// Signage Player index.js
-
 const axios = require('axios');
 const puppeteer = require('puppeteer');
 const { exec, execSync } = require('node:child_process');
-const fs = require('node:fs').promises;
-const path = require('node:path');
+const {logError} = require("../lib/errorHandling");
 
 let config;
 let browser;
@@ -21,29 +18,7 @@ try {
 const SERVER_URL = config.server_ip;
 const SERVER_PORT = 3030;
 const PLAYER_ID = config.player_name;
-const MAX_LOG_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 const TIMEOUT = 60 * 1000; // Wait 60 seconds before checking for new content
-const LOG_FILE = path.join(__dirname, 'errors.log');
-
-async function logError(error) {
-    const timestamp = new Date().toISOString();
-    const logMessage = `${timestamp}: ${error.stack || error}\n`;
-
-    try {
-        // Check if file exists and its size
-        const stats = await fs.stat(LOG_FILE).catch(() => ({ size: 0 }));
-
-        if (stats.size > MAX_LOG_SIZE) {
-            // If file is too large, rename it and start a new one
-            await fs.rename(LOG_FILE, `${LOG_FILE}.old`);
-        }
-
-        // Append to the log file
-        await fs.appendFile(LOG_FILE, logMessage);
-    } catch (err) {
-        console.error('Failed to write to log file:', err);
-    }
-}
 
 if (!SERVER_URL) {
     console.error('Missing server URL in config file');
@@ -66,7 +41,7 @@ async function initBrowser() {
             '--disable-infobars',
             '--autoplay-policy=no-user-gesture-required',
         ],
-        executablePath: '/usr/bin/chromium-browser',
+        // executablePath: '/usr/bin/chromium-browser',
         defaultViewport: null,
         ignoreDefaultArgs: ['--enable-automation'],
     });
@@ -75,10 +50,10 @@ async function initBrowser() {
 
 async function getCurrentUrl() {
     try {
+
         const url = `http://${SERVER_URL}:${SERVER_PORT}/player/${PLAYER_ID}`;
         const response = await axios.get(url);
-        console.log('Fetched URL:', response.data.url)
-        console.log('From:', url)
+
         return response.data.url;
     } catch (error) {
         console.error('Error fetching URL:', error);

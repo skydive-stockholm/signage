@@ -38,10 +38,10 @@
                         <td>{{ player.id }}</td>
                         <td>{{ player.name }}</td>
                         <td>
-                            <button @click="selectedPlayerId = player.id" type="button" class="btn btn-primary btn-sm ml-4">
+                            <button @click="selectedPlayerId = player.id" type="button" class="btn btn-primary btn-sm">
                                 Schedules
                             </button>
-                            <button @click="deletePlayer(player.id)" type="button" class="btn btn-danger btn-sm ml-4">
+                            <button @click="deletePlayer(player.id)" type="button" class="btn btn-danger btn-sm ms-2">
                                 Delete
                             </button>
                         </td>
@@ -53,7 +53,7 @@
                     <form @submit.prevent="createPlayer">
                         <div class="mb-3">
                             <label for="playerName" class="form-label">Player name</label>
-                            <input v-model="playerName" class="form-control" id="playerName" aria-describedby="emailHelp">
+                            <input v-model="playerName" class="form-control" id="playerName" placeholder="side-kitchen-1">
                         </div>
 
                         <button type="submit" class="btn btn-primary">Create new player</button>
@@ -162,12 +162,12 @@
 </div>
 
 <script>
-    const {createApp, ref, computed, onMounted} = Vue
+    const {createApp, ref, computed} = window.Vue
 
     createApp({
         setup() {
             const players = ref([])
-            const playerName = ref('Player1')
+            const playerName = ref('sf-office-1')
             const selectedPlayerId = ref(null)
             const selectedSchedule = ref({
                 player_id: null,
