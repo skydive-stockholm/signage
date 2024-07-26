@@ -41,7 +41,7 @@ async function initBrowser() {
             '--disable-infobars',
             '--autoplay-policy=no-user-gesture-required',
         ],
-        // executablePath: '/usr/bin/chromium-browser',
+        executablePath: '/usr/bin/chromium-browser',
         defaultViewport: null,
         ignoreDefaultArgs: ['--enable-automation'],
     });
@@ -50,7 +50,6 @@ async function initBrowser() {
 
 async function getCurrentUrl() {
     try {
-
         const url = `http://${SERVER_URL}:${SERVER_PORT}/player/${PLAYER_ID}`;
         const response = await axios.get(url);
 
@@ -129,6 +128,9 @@ async function main() {
             } else if (!newUrl && isScreenOn && hasCEC) {
                 console.log('No scheduled content, turning off screen');
                 await turnScreenOff();
+                if (page) {
+                    await browser.close();
+                }
                 currentUrl = null;
             }
 
