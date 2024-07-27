@@ -101,12 +101,22 @@
                             <td>{{ schedule.start_time }}</td>
                             <td>{{ schedule.end_time }}</td>
                             <td>{{ schedule.url }}</td>
-                            <td>{{ schedule.days }}</td>
+                            <td>
+                                <div v-if="schedule.days.length === 7">
+                                    Every day
+                                </div>
+
+                                <div v-else-if="schedule.days.length">
+                                    <div v-for="day in schedule.days" :key="day">
+                                        {{ getDayName(day) }}
+                                    </div>
+                                </div>
+                            </td>
                             <td>
                                 <button type="button" class="btn btn-primary btn-sm" @click="editSchedule(schedule)">
                                     Edit
                                 </button>
-                                <button type="button" class="btn btn-danger btn-sm" @click="deleteSchedule(schedule.id)">
+                                <button type="button" class="btn btn-danger btn-sm ms-2" @click="deleteSchedule(schedule.id)">
                                     Delete
                                 </button>
                             </td>
@@ -206,6 +216,11 @@
                     }
                 })
             });
+
+            function getDayName(number) {
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                return days[number]
+            }
 
             const editSchedule = (schedule) => {
                 createScheduleDialog.value.showModal()
@@ -348,6 +363,8 @@
                 createSchedule,
                 deleteSchedule,
                 selectedSchedule,
+
+                getDayName,
             }
         }
     }).mount('#app')
