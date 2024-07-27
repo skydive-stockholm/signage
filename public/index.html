@@ -14,6 +14,16 @@
 
 <div id="app" class="py-4">
     <div class="container">
+        <nav>
+            <div class="logo mb-3 d-flex align-items-center gap-4 lead">
+                <img src="/sf-logo.png" alt="" width="100">
+
+                <div>
+                    🖥 &nbsp;
+                    Signage system
+                </div>
+            </div>
+        </nav>
         <div class="card">
             <div class="card-body">
 
@@ -186,8 +196,7 @@
             const createScheduleDialog = ref(null)
 
             onMounted(() => {
-                console.log(createScheduleDialog.value)
-                createScheduleDialog.value.addEventListener('close', () => {
+                createScheduleDialog.value?.addEventListener('close', () => {
                     selectedSchedule.value = {
                         player_id: null,
                         start_time: '',

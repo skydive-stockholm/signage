@@ -64,7 +64,7 @@ cp config.example.js config.js
 
 # Start the application with PM2
 echo "Starting the application with PM2..."
-pm2 start server/index.js --name signage-player || error "Failed to start application with PM2"
+pm2 start server/index.js --name signage-server || error "Failed to start application with PM2"
 
 # Set up PM2 to start on boot
 echo "Setting up PM2 to start on system boot..."
