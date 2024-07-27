@@ -73,6 +73,30 @@ test('Returns URL with overnight schedule', () => {
     expect(url).toBe("http://example.com");
 })
 
+test('Returns URL with midnight schedule', () => {
+    const fakeTime = moment()
+        .set('hour', 18)
+        .set('minute', 30)
+        .set('second', 0)
+        .valueOf();
+
+    jest.useFakeTimers();
+    jest.setSystemTime(fakeTime);
+
+    const schedules = [
+        {
+            start_time: "18:00",
+            end_time: "00:00",
+            days: "[1,2,3,4,5,6,0]",
+            url: "http://example.com"
+        }
+    ];
+
+    const url = PlayerScheduleResolver.get(schedules);
+
+    expect(url).toBe("http://example.com");
+})
+
 test('Does not return URL with overnight schedule', () => {
     const fakeTime = moment()
         .set('hour', 3)

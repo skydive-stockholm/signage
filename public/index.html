@@ -106,6 +106,10 @@
                                     Every day
                                 </div>
 
+                                <div v-else-if="schedule.days.includes(0)">
+                                    Weekend
+                                </div>
+
                                 <div v-else-if="schedule.days.length">
                                     <div v-for="day in schedule.days" :key="day">
                                         {{ getDayName(day) }}
