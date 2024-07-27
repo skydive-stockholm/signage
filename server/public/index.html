@@ -144,6 +144,9 @@
                             <td>{{ schedule.url }}</td>
                             <td>{{ schedule.days }}</td>
                             <td>
+                                <button type="button" class="btn btn-primary btn-sm" @click="editSchedule(schedule)">
+                                    Edit
+                                </button>
                                 <button type="button" class="btn btn-danger btn-sm" @click="deleteSchedule(schedule.id)">
                                     Delete
                                 </button>
@@ -179,8 +182,20 @@
             const createPlayerDialog = ref(null)
             const createScheduleDialog = ref(null)
 
+            const editSchedule = (schedule) => {
+                createScheduleDialog.value.showModal()
+                selectedSchedule.value = JSON.parse(JSON.stringify(schedule))
+            }
+
             const createSchedule = () => {
-                fetch(`player/${selectedPlayerId.value}/schedule`, {
+                let endpoint = `player/${selectedPlayerId.value}/schedule`;
+
+                // Editing a schedule
+                if (selectedSchedule.value.id) {
+                    endpoint = `schedule/${selectedSchedule.value.id}`
+                }
+
+                fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -195,10 +210,11 @@
                         return response.json();
                     })
                     .then((data) => {
-                        selectedPlayer.value.schedules.push({
-                            id: data.id,
-                            ...selectedSchedule.value
-                        });
+                        fetchPlayers()
+                        // selectedPlayer.value.schedules.push({
+                        //     id: data.id,
+                        //     ...selectedSchedule.value
+                        // });
                         selectedSchedule.value = {
                             start_time: '',
                             end_time: '',
@@ -296,6 +312,7 @@
                 selectedPlayerId,
 
                 createScheduleDialog,
+                editSchedule,
                 createSchedule,
                 deleteSchedule,
                 selectedSchedule,

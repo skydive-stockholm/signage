@@ -10,14 +10,13 @@ app.use(express.static('public'));
 
 async function startServer() {
   try {
+    await initializeDatabase();
 
-  await initializeDatabase();
+    app.use('/', routes);
 
-  app.use('/', routes);
-
-  app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-  });
+    app.listen(port, () => {
+      console.log(`Server running at http://localhost:${port}`);
+    });
   } catch (error) {
     await logError(error);
   }
