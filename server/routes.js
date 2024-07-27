@@ -3,7 +3,7 @@ const path = require('path');
 const { getDb } = require('./database');
 const moment = require("moment/moment");
 const {schedulesForPlayer, getPlayerByName} = require("./repository");
-const {PlayerScheduleResolver} = require("./schedule");
+const {PlayerScheduleResolver} = require("./PlayerScheduleResolver.js");
 
 const router = express.Router();
 

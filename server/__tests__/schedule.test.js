@@ -1,122 +1,77 @@
-const {PlayerScheduleResolver} = require("../schedule");
+const { PlayerScheduleResolver } = require("../PlayerScheduleResolver.js");
 const moment = require("moment");
 
-test('Returns URL with one simple schedule at 09:00', () => {
-    const fakeTime = moment()
-        .set('hour', 9)
-        .set('minute', 0)
-        .set('second', 0)
-        .valueOf();
+describe('PlayerScheduleResolver', () => {
+    beforeAll(() => {
+        jest.useFakeTimers();
+    });
 
-    jest.useFakeTimers();
-    jest.setSystemTime(fakeTime);
+    afterAll(() => {
+        jest.useRealTimers();
+    });
 
-    const schedules = [
-        {
-            start_time: "08:00",
-            end_time: "20:00",
-            days: "[1,2,3,4,5,6,0]",
-            url: "http://example.com"
-        }
-    ];
+    const setTestTime = (hour, minute = 0, second = 0, day = 1) => {
+        const fakeTime = moment().set({ hour, minute, second, day }).valueOf();
+        jest.setSystemTime(fakeTime);
+    };
 
-    const url = PlayerScheduleResolver.get(schedules);
+    const createSchedule = (start_time, end_time, days, url) => ({
+        start_time,
+        end_time,
+        days: JSON.stringify(days),
+        url
+    });
 
-    expect(url).toBe("http://example.com");
-})
+    const testScheduleResolver = (time, schedules, expected) => {
+        setTestTime(time.hour, time.minute, time.second, time.day);
+        const url = PlayerScheduleResolver.get(schedules);
+        expect(url).toBe(expected);
+    };
 
-test('Does not return URL with one simple schedule at 01:00', () => {
-    const fakeTime = moment()
-        .set('hour', 1)
-        .set('minute', 0)
-        .set('second', 0)
-        .valueOf();
+    describe('Simple schedule tests', () => {
+        const simpleSchedule = [createSchedule("08:00", "20:00", [1,2,3,4,5,6,0], "http://example.com")];
 
-    jest.useFakeTimers();
-    jest.setSystemTime(fakeTime);
+        test('Returns URL at 09:00', () => {
+            testScheduleResolver({ hour: 9 }, simpleSchedule, "http://example.com");
+        });
 
-    const schedules = [
-        {
-            start_time: "08:00",
-            end_time: "20:00",
-            days: "[1,2,3,4,5,6,0]",
-            url: "http://example.com"
-        }
-    ];
+        test('Does not return URL at 01:00', () => {
+            testScheduleResolver({ hour: 1 }, simpleSchedule, "");
+        });
+    });
 
-    const url = PlayerScheduleResolver.get(schedules);
+    describe('Overnight schedule tests', () => {
+        const overnightSchedule = [createSchedule("08:00", "02:00", [1,2,3,4,5,6,0], "http://example.com")];
 
-    expect(url).toBe("");
-})
+        test('Returns URL at 01:00', () => {
+            testScheduleResolver({ hour: 1 }, overnightSchedule, "http://example.com");
+        });
 
-test('Returns URL with overnight schedule', () => {
-    const fakeTime = moment()
-        .set('hour', 1)
-        .set('minute', 0)
-        .set('second', 0)
-        .valueOf();
+        test('Does not return URL at 03:00', () => {
+            testScheduleResolver({ hour: 3 }, overnightSchedule, "");
+        });
+    });
 
-    jest.useFakeTimers();
-    jest.setSystemTime(fakeTime);
+    describe('Midnight schedule test', () => {
+        const midnightSchedule = [createSchedule("18:00", "00:00", [1,2,3,4,5,6,0], "http://example.com")];
 
-    const schedules = [
-        {
-            start_time: "08:00",
-            end_time: "02:00",
-            days: "[1,2,3,4,5,6,0]",
-            url: "http://example.com"
-        }
-    ];
+        test('Returns URL at 18:30', () => {
+            testScheduleResolver({ hour: 18, minute: 30 }, midnightSchedule, "http://example.com");
+        });
+    });
 
-    const url = PlayerScheduleResolver.get(schedules);
+    describe('Multiple schedules tests', () => {
+        const multipleSchedules = [
+            createSchedule("13:00", "15:00", [1,2,3,4,5,6,0], "http://example.org"),
+            createSchedule("08:00", "20:00", [1,2,3,4,5,6,0], "http://example.com")
+        ];
 
-    expect(url).toBe("http://example.com");
-})
+        test('Returns first matching URL at 14:00', () => {
+            testScheduleResolver({ hour: 14, day: 2 }, multipleSchedules, "http://example.org");
+        });
 
-test('Returns URL with midnight schedule', () => {
-    const fakeTime = moment()
-        .set('hour', 18)
-        .set('minute', 30)
-        .set('second', 0)
-        .valueOf();
-
-    jest.useFakeTimers();
-    jest.setSystemTime(fakeTime);
-
-    const schedules = [
-        {
-            start_time: "18:00",
-            end_time: "00:00",
-            days: "[1,2,3,4,5,6,0]",
-            url: "http://example.com"
-        }
-    ];
-
-    const url = PlayerScheduleResolver.get(schedules);
-
-    expect(url).toBe("http://example.com");
-})
-
-test('Does not return URL with overnight schedule', () => {
-    const fakeTime = moment()
-        .set('hour', 3)
-        .set('minute', 0)
-        .set('second', 0)
-        .valueOf();
-
-    jest.useFakeTimers();
-    jest.setSystemTime(fakeTime);
-
-    const schedules = [
-        {
-            start_time: "08:00",
-            end_time: "02:00",
-            days: "[1,2,3,4,5,6,0]",
-            url: "http://example.com"
-        }
-    ];
-
-    const url = PlayerScheduleResolver.get(schedules);
-
-    expect(url).toBe("");
-})
+        test('Returns second matching URL at 16:00', () => {
+            testScheduleResolver({ hour: 16, day: 2 }, multipleSchedules, "http://example.com");
+        });
+    });
+});
