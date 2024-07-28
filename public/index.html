@@ -106,8 +106,18 @@
                                     Every day
                                 </div>
 
-                                <div v-else-if="schedule.days.includes(0)">
-                                    Weekend
+                                <div v-else-if="schedule.days.includes(0) && schedule.days.includes(6)">
+                                    Weekends
+                                </div>
+
+                                <div v-else-if="
+                                    schedule.days.includes(1) &&
+                                    schedule.days.includes(2) &&
+                                    schedule.days.includes(3) &&
+                                    schedule.days.includes(4) &&
+                                    schedule.days.includes(5)
+                                ">
+                                    Weekdays
                                 </div>
 
                                 <div v-else-if="schedule.days.length">
