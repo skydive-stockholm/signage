@@ -9,125 +9,103 @@ error() {
     exit 1
 }
 
-sf_echo() {
-  command printf %s\\n "$*" 2>/dev/null
-}
+echo "=========================================="
+echo "   Installing URL Player for Raspberry Pi"
+echo "=========================================="
 
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-{ sf_echo >&2 "$(cat)" ; } << EOF
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@     ▶ INSTALLING SF-SIGNAGE PLAYER ▶    @
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-EOF
-
-# Function to prompt for input if arguments are not provided
-prompt_input() {
-    if [ -z "$ip_address" ]; then
-        read -p "Enter server IP address: " ip_address
-    fi
-    if [ -z "$player_name" ]; then
-        read -p "Enter player name: " player_name
-    fi
-}
-
-# Parse command-line arguments
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --ipaddress) ip_address="$2"; shift ;;
-        --playername) player_name="$2"; shift ;;
-        *) echo "Unknown parameter: $1"; exit 1 ;;
-    esac
-    shift
-done
-
-# Prompt for input if arguments are not provided
-prompt_input
+# Make sure we're running as root
+if [ "$(id -u)" -ne 0 ]; then
+    error "This script must be run as root. Try 'sudo $0'"
+fi
 
 # Update package list
 echo "Updating package list..."
-apt-get update || error "Failed to update package list"
+apt-get update -qq || error "Failed to update package list"
 
-# Install necessary packages
-echo "Installing necessary packages..."
-apt-get install -y xserver-xorg xinit x11-xserver-utils unclutter matchbox-window-manager cec-utils git curl nodejs npm fonts-noto-color-emoji || error "Failed to install necessary packages"
+# Install minimal necessary packages as per tutorial
+echo "Installing minimal necessary packages..."
+apt-get install --no-install-recommends -y \
+  xserver-xorg-video-all \
+  xserver-xorg-input-all \
+  xserver-xorg-core \
+  xinit \
+  x11-xserver-utils \
+  chromium-browser \
+  unclutter \
+  python3 \
+  python3-requests \
+  cec-utils \
+  fonts-noto-color-emoji \
+  || error "Failed to install necessary packages"
 
-# Install chrome
-echo "Installing Chrome..."
-apt-get install chromium-browser chromium-codecs-ffmpeg
-
-# Install NVM (Node Version Manager)
-echo "Installing NVM..."
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash || error "Failed to install NVM"
-
-# Load NVM
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-# Install version 21 of Node.js
-echo "Installing latest LTS version of Node.js..."
-nvm install 21 || error "Failed to install Node.js"
-
-# Clone your project repository
-echo "Cloning project repository..."
-git clone https://github.com/skydive-stockholm/signage.git sf-signage || error "Failed to clone repository"
-
-# Navigate to project directory
-cd sf-signage || error "Failed to navigate to project directory"
-
-# Check if config.json exists, if not create it with an empty JSON object
-if [ ! -f player/config.json ]; then
-    echo '{}' > player/config.json
+# Check if cec-client is available
+echo "Checking CEC availability..."
+if command -v cec-client > /dev/null; then
+    echo "CEC client is available - screen power control enabled"
+else
+    echo "WARNING: cec-client not available despite installation. Screen power control may not work."
 fi
 
-content="{
-    \"server_ip\": \"$ip_address\",
-    \"player_name\": \"$player_name\"
-}"
+# Download player.py from https://raw.githubusercontent.com/skydive-stockholm/signage/refs/heads/main/player/index.js
+wget https://raw.githubusercontent.com/skydive-stockholm/signage/refs/heads/main/player/player.py -O /home/pi/player.py
 
-# Write updated content back to file
-echo "$content" > player/config.json
+# Create destination directory
+echo "Setting up player..."
+touch /home/pi/player.log || error "Failed to create log file"
+chmod +x "/home/pi/player.py" || error "Failed to set executable permissions"
 
-# Install project dependencies
-echo "Installing project dependencies..."
-npm install || error "Failed to install project dependencies"
+# Create .bash_profile for autologin -> startx
+echo "Setting up auto-start configuration..."
+cat << 'EOF' > /home/pi/.bash_profile
+if [ -z $DISPLAY ] && [ $(tty) = /dev/tty1 ]
+then
+  startx
+fi
+EOF
+chown pi:pi /home/pi/.bash_profile
 
-# Create .xinitrc file
-cat << EOF > /home/pi/player
-#!/bin/bash
-
-# Hide the cursor
-unclutter -idle 0 &
-
-# Start the application
-xset s off
+# Create .xinitrc for browser kiosk setup
+echo "Creating X initialization script..."
+cat << 'EOF' > /home/pi/.xinitrc
+#!/usr/bin/env sh
 xset -dpms
+xset s off
 xset s noblank
 
-# Start the Node.js application and restart if it crashes
-while true; do
-    matchbox-window-manager -use_titlebar no & unclutter & node /home/pi/sf-signage/player/index.js
-    sleep 1
-done
+# Start the URL player in the background
+unclutter & /home/pi/player.py
+EOF
+chmod +x /home/pi/.xinitrc
+chown pi:pi /home/pi/.xinitrc
+
+# Configure raspi-config for console autologin
+echo "Configuring system for console autologin..."
+raspi-config nonint do_boot_behaviour B2
+
+# Set up daily reboot at 4am for maintenance
+echo "Setting up daily reboot..."
+cat << EOF > /etc/cron.d/reboot-player
+0 4 * * * root reboot
 EOF
 
-chmod +x /home/pi/player
+# Get hostname for display in output
+HOSTNAME=$(hostname)
 
-cat << EOF >> /home/pi/.bashrc
-xinit /home/pi/player -- vt$(fgconsole)
-EOF
-
-# Enable auto-login for user "pi"
-sudo raspi-config nonint do_boot_behaviour B2
-
+echo "================================================"
 echo "Installation completed successfully!"
+echo ""
+echo "The URL player is now running and will:"
+echo "- Check http://192.168.55.52:3030/player/$HOSTNAME every minute for URLs"
+echo "- Automatically display URLs in a fullscreen browser"
+echo "- Restart daily at 4:00 AM for maintenance"
+echo ""
+echo "- To exit the browser manually, press Alt+F4"
+echo "- To restart the browser manually, type 'startx'"
+echo "- Logs are available at: /home/pi/url-player.log"
+echo ""
+echo "The system will reboot in 10 seconds to apply all changes..."
+echo "================================================"
 
-# Reboot the machine every morning.
-cat << EOF > /etc/cron.d/reboot
-30 07 * * * reboot
-EOF
-
-sudo reboot
+# Reboot the system
+sleep 10
+reboot
