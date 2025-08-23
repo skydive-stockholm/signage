@@ -97,7 +97,6 @@ def launch_browser(url):
             "--window-position=0,0",
             "--start-fullscreen",
             "--kiosk",
-            "--incognito",
             "--noerrdialogs",
             "--disable-translate",
             "--no-first-run",
