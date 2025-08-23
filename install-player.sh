@@ -52,6 +52,8 @@ wget https://raw.githubusercontent.com/skydive-stockholm/signage/refs/heads/main
 # Create destination directory
 echo "Setting up player..."
 touch /home/pi/player.log || error "Failed to create log file"
+chown pi:pi /home/pi/player.log || error "Failed to set ownership on log file"
+chown pi:pi /home/pi/player.py || error "Failed to set ownership on player script"
 chmod +x "/home/pi/player.py" || error "Failed to set executable permissions"
 
 # Create .bash_profile for autologin -> startx
