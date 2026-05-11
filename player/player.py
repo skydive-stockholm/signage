@@ -41,6 +41,19 @@ CEC_AVAILABLE = shutil.which('cec-client') is not None
 # Detect chromium binary name (Raspberry Pi OS Bookworm+ uses 'chromium', older used 'chromium-browser')
 CHROMIUM_BIN = shutil.which('chromium') or shutil.which('chromium-browser') or 'chromium'
 
+# RPi 1 and 2 use VideoCore IV which doesn't support GLES 3.0 — needs software rendering
+def _pi_has_gpu():
+    try:
+        with open('/proc/device-tree/model') as f:
+            model = f.read()
+        return 'Raspberry Pi 1' not in model and 'Raspberry Pi 2' not in model
+    except Exception:
+        return True
+
+GPU_ACCELERATION = _pi_has_gpu()
+if not GPU_ACCELERATION:
+    logger.info("RPi 1/2 detected — GPU acceleration disabled, using software rendering")
+
 if CEC_AVAILABLE:
     logger.info("CEC client is available - screen power control enabled")
 else:
@@ -129,6 +142,8 @@ def launch_browser(url):
             "--overscroll-history-navigation=0",
             "--disable-pinch"
         ]
+        if not GPU_ACCELERATION:
+            browser_cmd.append("--disable-gpu")
 
         # Launch browser as a subprocess and save the PID
         process = subprocess.Popen(browser_cmd)
