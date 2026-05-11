@@ -40,18 +40,33 @@ CEC_AVAILABLE = shutil.which('cec-client') is not None
 
 # Detect chromium binary name (Raspberry Pi OS Bookworm+ uses 'chromium', older used 'chromium-browser')
 CHROMIUM_BIN = shutil.which('chromium') or shutil.which('chromium-browser') or 'chromium'
+
 if CEC_AVAILABLE:
     logger.info("CEC client is available - screen power control enabled")
 else:
     logger.warning("CEC client not available - screen power control disabled")
 
+def get_hdmi_output():
+    """Return the connected xrandr output name, or None if not found"""
+    try:
+        result = subprocess.run(['xrandr'], capture_output=True, text=True, check=True)
+        for line in result.stdout.splitlines():
+            if ' connected' in line:
+                return line.split()[0]
+    except Exception:
+        pass
+    return None
+
 def turn_screen_on():
-    """Turn the connected HDMI display on using CEC"""
+    """Turn the connected HDMI display on using CEC and xrandr"""
     if not CEC_AVAILABLE:
         logger.warning("Attempted to turn screen on, but CEC client is not available")
         return False
 
     try:
+        output = get_hdmi_output()
+        if output:
+            subprocess.run(['xrandr', '--output', output, '--auto'], check=True)
         subprocess.run('echo "on 0" | cec-client -s -d 1', shell=True, check=True)
         logger.info("Screen turned ON via CEC")
         return True
@@ -60,13 +75,16 @@ def turn_screen_on():
         return False
 
 def turn_screen_off():
-    """Turn the connected HDMI display off using CEC"""
+    """Turn the connected HDMI display off using CEC and xrandr"""
     if not CEC_AVAILABLE:
         logger.warning("Attempted to turn screen off, but CEC client is not available")
         return False
 
     try:
         subprocess.run('echo "standby 0" | cec-client -s -d 1', shell=True, check=True)
+        output = get_hdmi_output()
+        if output:
+            subprocess.run(['xrandr', '--output', output, '--off'], check=True)
         logger.info("Screen turned OFF via CEC")
         return True
     except subprocess.CalledProcessError as e:
@@ -153,7 +171,7 @@ def main():
         logger.info(f"Starting Minimal URL Player with hostname: {HOSTNAME}")
 
         current_url = None
-        screen_on = False
+        screen_on = None  # unknown at startup; first poll always syncs state
 
         while True:
             new_url = get_current_url()
@@ -170,7 +188,7 @@ def main():
                     current_url = new_url
             else:
                 # No URL - turn off screen and close browser
-                if screen_on and CEC_AVAILABLE:
+                if screen_on is not False and CEC_AVAILABLE:
                     close_browser()
                     screen_on = not turn_screen_off()
                     current_url = None
