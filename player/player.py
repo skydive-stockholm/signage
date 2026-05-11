@@ -143,7 +143,7 @@ def launch_browser(url):
             "--disable-pinch"
         ]
         if not GPU_ACCELERATION:
-            browser_cmd.append("--disable-gpu")
+            browser_cmd += ["--disable-gpu", "--no-gl-override"]
 
         # Launch browser as a subprocess and save the PID
         process = subprocess.Popen(browser_cmd)
