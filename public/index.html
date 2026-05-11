@@ -1,387 +1,890 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Signage System Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signage System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <style>
+    :root { --sidebar-w: 240px; }
+    html, body { height: 100%; margin: 0; }
+    body { background: #f0f4f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 200;
+      background: #0f172a; display: flex; align-items: center; padding: 0 1.25rem; gap: 0.875rem;
+    }
+    .topbar-title { color: #e2e8f0; font-size: 0.9rem; font-weight: 500; }
+
+    .app-body { display: flex; height: calc(100vh - 52px); margin-top: 52px; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: #1e293b; display: flex; flex-direction: column; overflow-y: auto;
+    }
+    .sidebar-section-label {
+      padding: 1rem 1rem 0.4rem;
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #475569; font-weight: 600;
+    }
+    .player-item {
+      padding: 0.5rem 1rem 0.5rem 1rem; cursor: pointer;
+      display: flex; align-items: center; gap: 0.6rem;
+      border-left: 3px solid transparent; transition: background 0.12s;
+    }
+    .player-item.indented { padding-left: 1.6rem; }
+    .player-item:hover { background: rgba(255,255,255,0.06); }
+    .player-item.active { background: rgba(99,102,241,0.18); border-left-color: #6366f1; }
+    .player-item.active .player-item-name { color: #e2e8f0; }
+    .player-item-name { font-size: 0.85rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+
+    .group-header {
+      padding: 0.35rem 1rem; display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;
+      background: rgba(0,0,0,0.12);
+    }
+    .group-override-btn {
+      background: transparent; border: 1px solid #334155; color: #64748b;
+      font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; cursor: pointer; white-space: nowrap;
+      transition: all 0.12s;
+    }
+    .group-override-btn:hover { border-color: #f59e0b; color: #f59e0b; }
+
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.online  { background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,0.25); }
+    .status-dot.recent  { background: #f59e0b; }
+    .status-dot.offline { background: #334155; }
+
+    .sidebar-add-btn {
+      margin: 0.75rem 1rem 0.5rem;
+      background: transparent; border: 1px dashed #334155; color: #64748b;
+      font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: 6px;
+      cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+      transition: all 0.15s; width: calc(var(--sidebar-w) - 2rem); text-align: left;
+    }
+    .sidebar-add-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+    .sidebar-add-btn:disabled { opacity: 0.5; cursor: default; }
+
+    .system-panel {
+      padding: 0.5rem 1rem 1rem;
+    }
+    .system-hash {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ── Main ── */
+    .main { flex: 1; overflow-y: auto; padding: 1.5rem; }
+
+    .card2 {
+      background: white; border-radius: 12px; padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    }
+    .card2-label {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: #94a3b8; font-weight: 600; margin-bottom: 0.5rem;
+    }
+    .player-heading { font-size: 1.15rem; font-weight: 700; color: #0f172a; }
+    .player-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+
+    .url-chip {
+      display: inline-block; font-family: monospace; font-size: 0.78rem;
+      background: #f1f5f9; color: #334155; padding: 3px 8px; border-radius: 6px;
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      text-decoration: none; transition: background 0.12s;
+    }
+    .url-chip:hover { background: #e2e8f0; color: #0f172a; }
+
+    .override-banner {
+      background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 0.75rem 1rem;
+    }
+    .override-banner-label { font-size: 0.75rem; font-weight: 600; color: #92400e; margin-bottom: 0.35rem; }
+
+    /* ── Timeline ── */
+    .timeline-track {
+      position: relative; height: 28px; background: #f1f5f9;
+      border-radius: 6px; overflow: hidden; margin-bottom: 6px;
+    }
+    .timeline-seg {
+      position: absolute; top: 0; bottom: 0; opacity: 0.8;
+      cursor: default; transition: opacity 0.12s; border-radius: 3px;
+    }
+    .timeline-seg:hover { opacity: 1; }
+    .timeline-now {
+      position: absolute; top: 0; bottom: 0; width: 2px;
+      background: rgba(239,68,68,0.7); border-radius: 1px;
+    }
+    .timeline-labels {
+      display: flex; justify-content: space-between; font-size: 0.68rem; color: #94a3b8; padding: 0 2px;
+    }
+
+    /* ── Schedule table ── */
+    .sched-table { margin: 0; }
+    .sched-table th {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: #94a3b8; font-weight: 600; border: none; padding-bottom: 0.5rem;
+    }
+    .sched-table td { vertical-align: middle; border-color: #f1f5f9; padding: 0.45rem 0.5rem; }
+    .time-pill {
+      font-family: monospace; font-size: 0.78rem;
+      background: #ede9fe; color: #5b21b6; padding: 2px 7px; border-radius: 5px;
+    }
+
+    /* ── Audit log ── */
+    .audit-entry {
+      display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+      padding: 0.35rem 0; border-bottom: 1px solid #f8fafc; font-size: 0.78rem;
+    }
+    .audit-entry:last-child { border-bottom: none; }
+    .audit-badge {
+      font-size: 0.65rem; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .audit-badge.player_created, .audit-badge.schedules_copied_from { background: #d1fae5; color: #065f46; }
+    .audit-badge.player_deleted, .audit-badge.schedule_deleted { background: #fee2e2; color: #991b1b; }
+    .audit-badge.schedule_added, .audit-badge.schedule_updated { background: #dbeafe; color: #1e40af; }
+    .audit-badge.override_set { background: #fef3c7; color: #92400e; }
+    .audit-badge.override_cleared { background: #f3f4f6; color: #374151; }
+    .audit-badge.group_changed { background: #ede9fe; color: #5b21b6; }
+    .audit-time { color: #94a3b8; font-size: 0.72rem; flex-shrink: 0; }
+    .audit-detail { color: #475569; font-family: monospace; font-size: 0.72rem; }
+
+    /* ── Buttons ── */
+    .btn-ghost-danger { background: #fef2f2; color: #dc2626; border: none; border-radius: 8px; font-size: 0.78rem; padding: 4px 10px; }
+    .btn-ghost-danger:hover { background: #fee2e2; }
+    .btn-ghost-purple { background: #ede9fe; color: #6d28d9; border: none; border-radius: 6px; font-size: 0.75rem; padding: 3px 9px; }
+    .btn-ghost-purple:hover { background: #ddd6fe; }
+    .btn-ghost-gray { background: #f1f5f9; color: #475569; border: none; border-radius: 6px; font-size: 0.75rem; padding: 3px 7px; }
+    .btn-ghost-gray:hover { background: #e2e8f0; }
+
+    .empty-state { text-align: center; padding: 4rem 2rem; color: #94a3b8; }
+    .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+    dialog {
+      border: none; border-radius: 14px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+      padding: 1.5rem; max-width: 480px; width: 92vw;
+    }
+    dialog::backdrop { background: rgba(15,23,42,0.55); backdrop-filter: blur(2px); }
+    .dialog-title { font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 1.1rem; }
+
+    .template-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.3rem 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .template-row:last-child { border-bottom: none; }
+  </style>
 </head>
-<body class="bg-light">
+<body>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
-<div id="app" class="py-4">
-    <div class="container">
-        <nav>
-            <div class="logo mb-3 d-flex align-items-center gap-4 lead">
-                <img src="/sf-logo.png" alt="" width="100">
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <span class="topbar-title">Signage System</span>
+  </div>
 
-                <div>
-                    🖥 &nbsp;
-                    Signage system
-                </div>
-            </div>
-        </nav>
-        <div class="card">
-            <div class="card-body">
+  <!-- Body -->
+  <div class="app-body">
 
-                <h2>
-                    Players
+    <!-- ── Sidebar ── -->
+    <div class="sidebar">
+      <div class="sidebar-section-label">Players</div>
 
-                    <button @click="createPlayerDialog.showModal()" type="button" class="btn btn-primary btn-sm ml-4">
-                        Create new player
-                    </button>
-                </h2>
+      <!-- Ungrouped -->
+      <div
+        v-for="p in ungroupedPlayers" :key="p.id"
+        class="player-item" :class="{ active: selectedPlayerId === p.id }"
+        @click="selectPlayer(p.id)"
+      >
+        <div class="status-dot" :class="playerStatus(p)"></div>
+        <span class="player-item-name">{{ p.name }}</span>
+        <span v-if="p.override_url" title="Override active" style="font-size:0.6rem;background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;">⚡</span>
+      </div>
 
-                <table class="table">
-                    <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th></th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr v-for="player in players" :key="player.id">
-                        <td>{{ player.id }}</td>
-                        <td>{{ player.name }}</td>
-                        <td>
-                            <button @click="selectedPlayerId = player.id" type="button" class="btn btn-primary btn-sm">
-                                Schedules
-                            </button>
-                            <button @click="deletePlayer(player.id)" type="button" class="btn btn-danger btn-sm ms-2">
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-
-                <dialog ref="createPlayerDialog">
-                    <form @submit.prevent="createPlayer">
-                        <div class="mb-3">
-                            <label for="playerName" class="form-label">Player name</label>
-                            <input v-model="playerName" class="form-control" id="playerName" placeholder="side-kitchen-1">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Create new player</button>
-                        <button @click="createPlayerDialog.close()" type="button" class="btn btn-secondary ms-2">Close</button>
-                    </form>
-                </dialog>
-            </div>
+      <!-- Groups -->
+      <template v-for="(groupPlayers, groupName) in playerGroups" :key="groupName">
+        <div class="group-header">
+          <span>{{ groupName }}</span>
+          <button class="group-override-btn" @click.stop="openGroupOverride(groupName)">⚡ Override all</button>
         </div>
-
-        <div class="card my-4" v-if="selectedPlayer">
-            <div class="card-body">
-                <h2>{{ selectedPlayer?.name }}</h2>
-
-                <p>
-                    🚧 Settings for player coming soon...
-                </p>
-
-                <h3>
-                    Schedules
-                </h3>
-
-                <div v-if="selectedPlayer">
-                    <table class="table">
-                        <thead>
-                        <tr>
-                            <th>Start time</th>
-                            <th>End time</th>
-                            <th>URL</th>
-                            <th>Days</th>
-                            <th></th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr v-for="schedule in selectedPlayer.schedules" :key="schedule.id">
-                            <td>{{ schedule.start_time }}</td>
-                            <td>{{ schedule.end_time }}</td>
-                            <td>{{ schedule.url }}</td>
-                            <td>
-                                <div v-if="schedule.days.length === 7">
-                                    Every day
-                                </div>
-
-                                <div v-else-if="schedule.days.includes(0) && schedule.days.includes(6)">
-                                    Weekends
-                                </div>
-
-                                <div v-else-if="
-                                    schedule.days.includes(1) &&
-                                    schedule.days.includes(2) &&
-                                    schedule.days.includes(3) &&
-                                    schedule.days.includes(4) &&
-                                    schedule.days.includes(5)
-                                ">
-                                    Weekdays
-                                </div>
-
-                                <div v-else-if="schedule.days.length">
-                                    <div v-for="day in schedule.days" :key="day">
-                                        {{ getDayName(day) }}
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-primary btn-sm" @click="editSchedule(schedule)">
-                                    Edit
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm ms-2" @click="deleteSchedule(schedule.id)">
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-
-                    <button @click="createScheduleDialog.showModal()" type="button" class="btn btn-primary btn-sm ml-auto">
-                        Create new schedule
-                    </button>
-                </div>
-            </div>
+        <div
+          v-for="p in groupPlayers" :key="p.id"
+          class="player-item indented" :class="{ active: selectedPlayerId === p.id }"
+          @click="selectPlayer(p.id)"
+        >
+          <div class="status-dot" :class="playerStatus(p)"></div>
+          <span class="player-item-name">{{ p.name }}</span>
+          <span v-if="p.override_url" title="Override active" style="font-size:0.6rem;background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;">⚡</span>
         </div>
+      </template>
+
+      <button class="sidebar-add-btn" @click="openCreatePlayer()">＋ New player</button>
+
+      <!-- ── System section ── -->
+      <div class="sidebar-section-label" style="margin-top:auto;">System</div>
+      <div class="system-panel">
+        <div class="system-hash">
+          <span style="font-size:0.7rem;color:#64748b;">player.py</span>
+          <code style="font-size:0.68rem;color:#94a3b8;background:#0f172a;padding:2px 6px;border-radius:4px;">{{ systemInfo.hash || '—' }}</code>
+        </div>
+        <button class="sidebar-add-btn" style="margin:0 0 0.3rem;width:100%;" @click="fetchFromGitHub()" :disabled="systemInfo.fetching">
+          ↻ {{ systemInfo.fetching === 'github' ? 'Fetching...' : 'Fetch from GitHub' }}
+        </button>
+        <button v-if="!systemInfo.force" class="sidebar-add-btn" style="margin:0;width:100%;" @click="pushUpdateToPlayers()" :disabled="systemInfo.fetching">
+          ↑ Push to players
+        </button>
+        <template v-else>
+          <div style="font-size:0.7rem;color:#f59e0b;margin:0.3rem 0 0.25rem;">⏳ Pending — players update on next poll</div>
+          <button class="sidebar-add-btn" style="margin:0;width:100%;background:#374151;" @click="cancelPushUpdate()">✕ Cancel push</button>
+        </template>
+        <div v-if="systemInfo.error" style="font-size:0.7rem;color:#ef4444;margin-top:0.4rem;">{{ systemInfo.error }}</div>
+        <div v-if="systemInfo.updated" style="font-size:0.7rem;color:#22c55e;margin-top:0.4rem;">{{ systemInfo.updated }}</div>
+      </div>
     </div>
 
-    <dialog ref="createScheduleDialog">
-        <form @submit.prevent="createSchedule">
-            <div class="row">
-                <div class="col">
-                    <div class="mb-3">
-                        <label for="start_time" class="form-label">Start time</label>
-                        <input type="time" v-model="selectedSchedule.start_time" class="form-control" id="start_time">
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="mb-3">
-                        <label for="end_time" class="form-label">End time</label>
-                        <input type="time" v-model="selectedSchedule.end_time" class="form-control" id="end_time">
-                    </div>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label for="url" class="form-label">URL</label>
-                <input type="url" v-model="selectedSchedule.url" class="form-control" id="url">
-            </div>
+    <!-- ── Main content ── -->
+    <div class="main">
+      <div v-if="!selectedPlayer" class="empty-state">
+        <div class="empty-state-icon">📺</div>
+        <div style="font-size:0.9rem;font-weight:500;color:#64748b;">Select a player to manage it</div>
+      </div>
 
-            <div class="btn-group mb-3" role="group" aria-label="Basic checkbox toggle button group">
-                <input type="checkbox" class="btn-check" id="monday" autocomplete="off" v-model="selectedSchedule.days" :value="1">
-                <label class="btn btn-outline-primary" for="monday">Monday</label>
+      <template v-else>
 
-                <input type="checkbox" class="btn-check" id="tuesday" autocomplete="off" v-model="selectedSchedule.days" :value="2">
-                <label class="btn btn-outline-primary" for="tuesday">Tuesday</label>
-
-                <input type="checkbox" class="btn-check" id="wednesday" autocomplete="off" v-model="selectedSchedule.days" :value="3">
-                <label class="btn btn-outline-primary" for="wednesday">Wednesday</label>
-
-                <input type="checkbox" class="btn-check" id="thursday" autocomplete="off" v-model="selectedSchedule.days" :value="4">
-                <label class="btn btn-outline-primary" for="thursday">Thursday</label>
-
-                <input type="checkbox" class="btn-check" id="friday" autocomplete="off" v-model="selectedSchedule.days" :value="5">
-                <label class="btn btn-outline-primary" for="friday">Friday</label>
-
-                <input type="checkbox" class="btn-check" id="saturday" autocomplete="off" v-model="selectedSchedule.days" :value="6">
-                <label class="btn btn-outline-primary" for="saturday">Saturday</label>
-
-                <input type="checkbox" class="btn-check" id="sunday" autocomplete="off" v-model="selectedSchedule.days" :value="0">
-                <label class="btn btn-outline-primary" for="sunday">Sunday</label>
-            </div>
-
+        <!-- Header card -->
+        <div class="card2">
+          <div class="d-flex align-items-start justify-content-between gap-3">
             <div>
-                <button @click="createSchedule" type="button" class="btn btn-primary">
-                    {{ selectedSchedule.id ? 'Update schedule' : 'Create schedule' }}
-                </button>
-                <button @click="createScheduleDialog.close()" type="button" class="btn btn-secondary ms-2">Close</button>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="status-dot" :class="playerStatus(selectedPlayer)"></div>
+                <span class="player-heading">{{ selectedPlayer.name }}</span>
+                <span v-if="selectedPlayer.override_url" style="font-size:0.7rem;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:99px;font-weight:600;">override active</span>
+                <span v-if="selectedPlayer.group_name" style="font-size:0.7rem;background:#ede9fe;color:#6d28d9;padding:2px 7px;border-radius:99px;font-weight:600;">{{ selectedPlayer.group_name }}</span>
+              </div>
+              <div class="player-sub" v-if="selectedPlayer.last_seen">Last seen {{ timeSince(selectedPlayer.last_seen) }} ago</div>
+              <div class="player-sub" v-else>Never connected</div>
             </div>
-        </form>
-    </dialog>
+            <button class="btn btn-ghost-danger" @click="deletePlayer(selectedPlayer.id)">Delete</button>
+          </div>
+
+          <!-- Group assignment -->
+          <div class="mt-3 d-flex align-items-center gap-2 flex-wrap">
+            <span style="font-size:0.75rem;color:#94a3b8;white-space:nowrap;">Assign to group:</span>
+            <input
+              v-model="groupNameEdit"
+              type="text" class="form-control form-control-sm"
+              placeholder="No group"
+              style="max-width:150px;font-size:0.8rem;"
+              @blur="savePlayerGroup()"
+              @keyup.enter="savePlayerGroup()"
+            >
+          </div>
+
+          <!-- Now showing -->
+          <div class="mt-3">
+            <div class="card2-label">Now showing</div>
+            <a v-if="nowShowing" :href="nowShowing" target="_blank" class="url-chip">{{ nowShowing }}</a>
+            <div v-else style="font-size:0.85rem;color:#94a3b8;">Nothing scheduled right now</div>
+          </div>
+        </div>
+
+        <!-- Override card -->
+        <div class="card2">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">URL Override</div>
+            <button v-if="selectedPlayer.override_url" class="btn btn-ghost-danger btn-sm" @click="clearOverride()">Clear override</button>
+          </div>
+          <div v-if="selectedPlayer.override_url" class="override-banner">
+            <div class="override-banner-label">
+              ⚡ Override active
+              <span v-if="selectedPlayer.override_until"> · until {{ formatDateTime(selectedPlayer.override_until) }}</span>
+            </div>
+            <a :href="selectedPlayer.override_url" target="_blank" class="url-chip">{{ selectedPlayer.override_url }}</a>
+          </div>
+          <div v-else>
+            <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:0.75rem;">Force this player to show a specific URL, bypassing its schedule.</div>
+            <div class="d-flex flex-wrap gap-2">
+              <input v-model="overrideUrl" type="url" class="form-control form-control-sm" placeholder="https://..." style="min-width:200px;flex:1;font-size:0.8rem;">
+              <input v-model="overrideUntil" type="datetime-local" class="form-control form-control-sm" style="width:195px;font-size:0.8rem;">
+              <button @click="setOverride()" class="btn btn-primary btn-sm" :disabled="!overrideUrl" style="white-space:nowrap;">Set override</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedules card -->
+        <div class="card2">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">Schedules</div>
+            <button @click="openCreateSchedule()" class="btn btn-primary btn-sm" style="font-size:0.8rem;">＋ Add schedule</button>
+          </div>
+
+          <!-- Timeline -->
+          <div v-if="timelineSegments.length" class="mb-4">
+            <div class="card2-label">Today's timeline</div>
+            <div class="timeline-track">
+              <div
+                v-for="(seg, i) in timelineSegments" :key="i"
+                class="timeline-seg"
+                :style="{ left: seg.left + '%', width: seg.width + '%', background: seg.color }"
+                :title="seg.url + '\n' + seg.start + ' – ' + seg.end"
+              ></div>
+              <div class="timeline-now" :style="{ left: nowPercent + '%' }"></div>
+            </div>
+            <div class="timeline-labels">
+              <span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+              <div v-for="(seg, i) in timelineLegend" :key="i" style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:#475569;">
+                <div :style="{ width:'10px',height:'10px',borderRadius:'3px',background:seg.color,flexShrink:0 }"></div>
+                <span style="font-family:monospace;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ seg.url }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Copy from another player -->
+          <div class="mb-3 d-flex gap-2 align-items-center">
+            <select v-model="copyFromPlayerId" class="form-select form-select-sm" style="max-width:220px;font-size:0.8rem;">
+              <option value="">Copy schedules from...</option>
+              <option v-for="p in otherPlayers" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+            <button @click="copySchedulesFrom()" class="btn btn-outline-secondary btn-sm" :disabled="!copyFromPlayerId" style="font-size:0.8rem;">Copy</button>
+          </div>
+
+          <!-- Schedule rows -->
+          <div v-if="selectedPlayer.schedules.length">
+            <table class="table sched-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Time</th>
+                  <th>Days</th>
+                  <th>URL</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(s, idx) in selectedPlayer.schedules" :key="s.id">
+                  <td style="width:36px;padding-right:0;">
+                    <div class="d-flex flex-column gap-0" style="font-size:0.65rem;line-height:1;">
+                      <button class="btn-ghost-gray" style="padding:1px 4px;border-radius:3px 3px 0 0;" :disabled="idx===0" @click="moveSchedule(s.id,'up')">▲</button>
+                      <button class="btn-ghost-gray" style="padding:1px 4px;border-radius:0 0 3px 3px;" :disabled="idx===selectedPlayer.schedules.length-1" @click="moveSchedule(s.id,'down')">▼</button>
+                    </div>
+                  </td>
+                  <td style="white-space:nowrap;">
+                    <span class="time-pill">{{ s.start_time }}</span>
+                    <span style="color:#cbd5e1;margin:0 3px;">–</span>
+                    <span class="time-pill">{{ s.end_time }}</span>
+                  </td>
+                  <td><span style="font-size:0.78rem;color:#475569;">{{ formatDays(s.days) }}</span></td>
+                  <td style="max-width:240px;">
+                    <a :href="s.url" target="_blank" class="url-chip" style="display:block;">{{ s.url }}</a>
+                  </td>
+                  <td style="white-space:nowrap;">
+                    <button class="btn-ghost-purple" @click="openEditSchedule(s)">Edit</button>
+                    <button class="btn-ghost-danger ms-1" @click="deleteSchedule(s.id)">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="text-center py-3" style="color:#94a3b8;font-size:0.85rem;">No schedules yet — add one to get started.</div>
+        </div>
+
+        <!-- Audit log card -->
+        <div class="card2">
+          <div class="d-flex align-items-center justify-content-between" @click="toggleAuditLog()" style="cursor:pointer;user-select:none;">
+            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">Audit log</div>
+            <span style="color:#94a3b8;font-size:0.75rem;">{{ showAuditLog ? '▲ Hide' : '▼ Show' }}</span>
+          </div>
+          <div v-if="showAuditLog" class="mt-3">
+            <div v-if="auditLog.length">
+              <div v-for="e in auditLog" :key="e.id" class="audit-entry">
+                <span class="audit-badge" :class="e.action">{{ e.action.replace(/_/g,' ') }}</span>
+                <span class="audit-time">{{ timeSince(e.timestamp) }} ago</span>
+                <span v-if="e.details" class="audit-detail">{{ auditDetail(e) }}</span>
+              </div>
+            </div>
+            <div v-else style="font-size:0.85rem;color:#94a3b8;">No audit entries yet.</div>
+          </div>
+        </div>
+
+      </template>
+    </div>
+  </div>
+
+  <!-- ── Create player dialog ── -->
+  <dialog ref="createPlayerDlg">
+    <div class="dialog-title">Add new player</div>
+    <form @submit.prevent="createPlayer()">
+      <div class="mb-3">
+        <label class="form-label" style="font-size:0.82rem;font-weight:500;">Player name</label>
+        <input v-model="newPlayerName" class="form-control form-control-sm" placeholder="sf-office-1" style="font-family:monospace;">
+        <div class="form-text">Kebab-case — must match the device hostname.</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Create player</button>
+        <button type="button" @click="createPlayerDlg.close()" class="btn btn-secondary btn-sm">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ── Schedule dialog ── -->
+  <dialog ref="scheduleDlg">
+    <div class="dialog-title">{{ editingSchedule ? 'Edit schedule' : 'Add schedule' }}</div>
+    <form @submit.prevent="saveSchedule()">
+
+      <!-- Template loader -->
+      <div v-if="templates.length" class="mb-3 p-2" style="background:#f8fafc;border-radius:8px;">
+        <div style="font-size:0.72rem;color:#64748b;font-weight:600;margin-bottom:0.4rem;">LOAD FROM TEMPLATE</div>
+        <div class="d-flex gap-2">
+          <select v-model="selectedTemplateId" class="form-select form-select-sm" style="font-size:0.8rem;">
+            <option value="">— select template —</option>
+            <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+          </select>
+          <button @click="applyTemplate()" type="button" class="btn btn-outline-secondary btn-sm" :disabled="!selectedTemplateId">Apply</button>
+        </div>
+      </div>
+
+      <div class="row g-2 mb-3">
+        <div class="col">
+          <label class="form-label" style="font-size:0.82rem;font-weight:500;">Start time</label>
+          <input type="time" v-model="scheduleForm.start_time" class="form-control form-control-sm" required>
+        </div>
+        <div class="col">
+          <label class="form-label" style="font-size:0.82rem;font-weight:500;">End time</label>
+          <input type="time" v-model="scheduleForm.end_time" class="form-control form-control-sm" required>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" style="font-size:0.82rem;font-weight:500;">URL</label>
+        <input type="url" v-model="scheduleForm.url" class="form-control form-control-sm" placeholder="https://..." required>
+      </div>
+      <div class="mb-1">
+        <label class="form-label d-block" style="font-size:0.82rem;font-weight:500;">Days</label>
+        <div class="btn-group flex-wrap" role="group">
+          <input type="checkbox" class="btn-check" id="sd1" v-model="scheduleForm.days" :value="1" autocomplete="off"><label class="btn btn-outline-primary btn-sm" for="sd1">Mon</label>
+          <input type="checkbox" class="btn-check" id="sd2" v-model="scheduleForm.days" :value="2" autocomplete="off"><label class="btn btn-outline-primary btn-sm" for="sd2">Tue</label>
+          <input type="checkbox" class="btn-check" id="sd3" v-model="scheduleForm.days" :value="3" autocomplete="off"><label class="btn btn-outline-primary btn-sm" for="sd3">Wed</label>
+          <input type="checkbox" class="btn-check" id="sd4" v-model="scheduleForm.days" :value="4" autocomplete="off"><label class="btn btn-outline-primary btn-sm" for="sd4">Thu</label>
+          <input type="checkbox" class="btn-check" id="sd5" v-model="scheduleForm.days" :value="5" autocomplete="off"><label class="btn btn-outline-primary btn-sm" for="sd5">Fri</label>
+          <input type="checkbox" class="btn-check" id="sd6" v-model="scheduleForm.days" :value="6" autocomplete="off"><label class="btn btn-outline-primary btn-sm" for="sd6">Sat</label>
+          <input type="checkbox" class="btn-check" id="sd0" v-model="scheduleForm.days" :value="0" autocomplete="off"><label class="btn btn-outline-primary btn-sm" for="sd0">Sun</label>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mb-3">
+        <button type="button" @click="scheduleForm.days=[1,2,3,4,5]" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem;">Weekdays</button>
+        <button type="button" @click="scheduleForm.days=[0,6]" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem;">Weekends</button>
+        <button type="button" @click="scheduleForm.days=[0,1,2,3,4,5,6]" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem;">Every day</button>
+        <button type="button" @click="scheduleForm.days=[]" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem;">Clear</button>
+      </div>
+
+      <div class="d-flex gap-2 mb-3">
+        <button type="submit" class="btn btn-primary btn-sm">{{ editingSchedule ? 'Save changes' : 'Add schedule' }}</button>
+        <button type="button" @click="scheduleDlg.close()" class="btn btn-secondary btn-sm">Cancel</button>
+      </div>
+
+      <!-- Save as template -->
+      <div v-if="scheduleForm.url" class="pt-2" style="border-top:1px solid #f1f5f9;">
+        <div style="font-size:0.72rem;color:#64748b;font-weight:600;margin-bottom:0.4rem;">SAVE AS TEMPLATE</div>
+        <div class="d-flex gap-2">
+          <input v-model="newTemplateName" type="text" class="form-control form-control-sm" placeholder="Template name..." style="font-size:0.8rem;">
+          <button @click="saveAsTemplate()" type="button" class="btn btn-outline-secondary btn-sm" :disabled="!newTemplateName" style="white-space:nowrap;">Save</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ── Group override dialog ── -->
+  <dialog ref="groupOverrideDlg">
+    <div class="dialog-title">Override group: {{ groupOverrideTarget }}</div>
+    <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:1rem;">Force all players in this group to show a specific URL.</div>
+    <div class="d-flex flex-column gap-2 mb-3">
+      <input v-model="groupOverrideUrl" type="url" class="form-control form-control-sm" placeholder="https://...">
+      <input v-model="groupOverrideUntil" type="datetime-local" class="form-control form-control-sm">
+    </div>
+    <div class="d-flex gap-2">
+      <button @click="setGroupOverride()" class="btn btn-warning btn-sm" :disabled="!groupOverrideUrl">Set override for group</button>
+      <button @click="clearGroupOverride()" class="btn btn-outline-secondary btn-sm">Clear group override</button>
+      <button @click="groupOverrideDlg.close()" class="btn btn-secondary btn-sm">Cancel</button>
+    </div>
+  </dialog>
+
+  <!-- ── Templates dialog ── -->
+  <dialog ref="templatesDlg">
+    <div class="dialog-title">Schedule templates</div>
+    <div v-if="templates.length">
+      <div v-for="t in templates" :key="t.id" class="template-row">
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:0.85rem;">{{ t.name }}</div>
+          <div style="font-size:0.75rem;color:#94a3b8;">{{ t.start_time }}–{{ t.end_time }} · {{ formatDays(t.days) }}</div>
+          <div class="url-chip" style="max-width:300px;">{{ t.url }}</div>
+        </div>
+        <button class="btn-ghost-danger" @click="deleteTemplate(t.id)">Delete</button>
+      </div>
+    </div>
+    <div v-else style="color:#94a3b8;font-size:0.85rem;text-align:center;padding:1rem;">No templates yet.</div>
+    <div class="mt-3">
+      <button @click="templatesDlg.close()" class="btn btn-secondary btn-sm">Close</button>
+    </div>
+  </dialog>
 
 </div>
 
 <script>
-    const {createApp, ref, computed, onMounted} = window.Vue
+const { createApp, ref, computed, watch } = window.Vue
 
-    createApp({
-        setup() {
-            const players = ref([])
-            const playerName = ref('sf-office-1')
-            const selectedPlayerId = ref(null)
-            const selectedSchedule = ref({
-                player_id: null,
-                url: '',
-                start_time: '',
-                end_time: '',
-                days: [],
-            })
-            const createPlayerDialog = ref(null)
-            const createScheduleDialog = ref(null)
+const COLORS = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316']
+function urlColor(url) {
+  let h = 0
+  for (let i = 0; i < url.length; i++) h = (h * 31 + url.charCodeAt(i)) | 0
+  return COLORS[Math.abs(h) % COLORS.length]
+}
+function timeToPercent(t) {
+  const [h, m] = t.split(':').map(Number)
+  return ((h * 60 + m) / 1440) * 100
+}
 
-            onMounted(() => {
-                createScheduleDialog.value?.addEventListener('close', () => {
-                    selectedSchedule.value = {
-                        player_id: null,
-                        start_time: '',
-                        end_time: '',
-                        url: '',
-                        days: [],
-                    }
-                })
-            });
+createApp({
+  setup() {
+    // ── State ───────────────────────────────────────────────────────────────
+    const players        = ref([])
+    const selectedPlayerId = ref(null)
+    const overrideUrl    = ref('')
+    const overrideUntil  = ref('')
+    const nowShowing     = ref(null)
+    const newPlayerName  = ref('sf-')
+    const editingSchedule = ref(false)
+    const scheduleForm   = ref({url:'', start_time:'', end_time:'', days:[]})
+    const groupNameEdit  = ref('')
+    const copyFromPlayerId = ref('')
+    const showAuditLog   = ref(false)
+    const auditLog       = ref([])
+    const templates      = ref([])
+    const selectedTemplateId = ref('')
+    const newTemplateName = ref('')
+    const systemInfo     = ref({hash: null, force: false, fetching: false, error: null, updated: false})
+    const groupOverrideTarget = ref('')
+    const groupOverrideUrl   = ref('')
+    const groupOverrideUntil = ref('')
 
-            function getDayName(number) {
-                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                return days[number]
-            }
+    // Dialog refs
+    const createPlayerDlg  = ref(null)
+    const scheduleDlg      = ref(null)
+    const groupOverrideDlg = ref(null)
+    const templatesDlg     = ref(null)
 
-            const editSchedule = (schedule) => {
-                createScheduleDialog.value.showModal()
-                selectedSchedule.value = JSON.parse(JSON.stringify(schedule))
-            }
+    // ── Computed ─────────────────────────────────────────────────────────────
+    const selectedPlayer = computed(() =>
+      players.value.find(p => p.id === selectedPlayerId.value) || null
+    )
+    const ungroupedPlayers = computed(() => players.value.filter(p => !p.group_name))
+    const playerGroups = computed(() => {
+      const g = {}
+      for (const p of players.value) {
+        if (!p.group_name) continue
+        if (!g[p.group_name]) g[p.group_name] = []
+        g[p.group_name].push(p)
+      }
+      return g
+    })
+    const otherPlayers = computed(() => players.value.filter(p => p.id !== selectedPlayerId.value))
+    const nowPercent = computed(() => {
+      const now = new Date()
+      return ((now.getHours() * 60 + now.getMinutes()) / 1440) * 100
+    })
+    const timelineSegments = computed(() => {
+      if (!selectedPlayer.value) return []
+      const today = new Date().getDay()
+      return selectedPlayer.value.schedules
+        .filter(s => s.days.includes(today))
+        .map(s => ({
+          left:  timeToPercent(s.start_time),
+          width: Math.max(0.4, timeToPercent(s.end_time) - timeToPercent(s.start_time)),
+          color: urlColor(s.url), url: s.url, start: s.start_time, end: s.end_time,
+        }))
+    })
+    const timelineLegend = computed(() => {
+      const seen = new Set()
+      return timelineSegments.value.filter(s => { if (seen.has(s.url)) return false; seen.add(s.url); return true })
+    })
 
-            const createSchedule = () => {
-                let endpoint = `player/${selectedPlayerId.value}/schedule`;
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function playerStatus(p) {
+      if (!p.last_seen) return 'offline'
+      const sec = (Date.now() - new Date(p.last_seen).getTime()) / 1000
+      return sec < 120 ? 'online' : sec < 600 ? 'recent' : 'offline'
+    }
+    function timeSince(iso) {
+      const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+      if (s < 60) return `${s}s`
+      if (s < 3600) return `${Math.floor(s/60)}m`
+      if (s < 86400) return `${Math.floor(s/3600)}h`
+      return `${Math.floor(s/86400)}d`
+    }
+    function formatDateTime(iso) {
+      return new Date(iso).toLocaleString([], {dateStyle:'short', timeStyle:'short'})
+    }
+    function formatDays(days) {
+      if (days.length === 7) return 'Every day'
+      if (days.length === 5 && [1,2,3,4,5].every(d => days.includes(d))) return 'Weekdays'
+      if (days.length === 2 && [0,6].every(d => days.includes(d))) return 'Weekends'
+      const n = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+      return [...days].sort((a,b)=>a-b).map(d => n[d]).join(', ')
+    }
+    function auditDetail(e) {
+      if (!e.details) return ''
+      const d = e.details
+      if (d.url) return d.url + (d.start_time ? ` ${d.start_time}–${d.end_time}` : '')
+      if (d.source) return `from ${d.source} (${d.count} schedules)`
+      if (d.group_name !== undefined) return d.group_name ? `→ ${d.group_name}` : 'removed from group'
+      return ''
+    }
 
-                // Editing a schedule
-                if (selectedSchedule.value.id) {
-                    endpoint = `schedule/${selectedSchedule.value.id}`
-                }
+    // ── Data fetching ─────────────────────────────────────────────────────────
+    async function fetchPlayers() {
+      players.value = await fetch('/players').then(r => r.json())
+    }
+    async function fetchNowShowing(id) {
+      if (!id) { nowShowing.value = null; return }
+      const d = await fetch(`/player/${id}/current`).then(r => r.json())
+      nowShowing.value = d.url || null
+    }
+    async function fetchTemplates() {
+      templates.value = await fetch('/templates').then(r => r.json())
+    }
+    async function fetchAuditLog(id) {
+      if (!id) { auditLog.value = []; return }
+      auditLog.value = await fetch(`/player/${id}/audit`).then(r => r.json())
+    }
+    async function fetchSystemInfo() {
+      const d = await fetch('/system/player-version').then(r => r.json()).catch(() => ({}))
+      systemInfo.value = {...systemInfo.value, hash: d.hash || null, force: !!d.force}
+    }
 
-                fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(selectedSchedule.value),
-                })
-                    .then(async response => {
-                        if (!response.ok) {
-                            const res = await response.json()
-                            alert(res.error)
-                        }
-                        return response.json();
-                    })
-                    .then((data) => {
-                        fetchPlayers()
-                        // selectedPlayer.value.schedules.push({
-                        //     id: data.id,
-                        //     ...selectedSchedule.value
-                        // });
-                        selectedSchedule.value = {
-                            start_time: '',
-                            end_time: '',
-                            url: '',
-                            days: [],
-                        };
-                        createScheduleDialog.value.close();
-                    })
-                    .catch(error => {
-                        console.error('There was a problem with the fetch operation:', error);
-                    });
-            }
+    // ── Player CRUD ───────────────────────────────────────────────────────────
+    function openCreatePlayer() { newPlayerName.value = 'sf-'; createPlayerDlg.value.showModal() }
+    async function createPlayer() {
+      const res = await fetch('/player', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name: newPlayerName.value})
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error); return }
+      players.value.push({schedules:[], ...data})
+      selectedPlayerId.value = data.id
+      createPlayerDlg.value.close()
+    }
+    async function deletePlayer(id) {
+      if (!confirm('Delete this player and all its schedules?')) return
+      await fetch(`/player/${id}`, {method:'DELETE'})
+      players.value = players.value.filter(p => p.id !== id)
+      selectedPlayerId.value = players.value[0]?.id || null
+    }
+    function selectPlayer(id) {
+      selectedPlayerId.value = id
+      showAuditLog.value = false
+      copyFromPlayerId.value = ''
+    }
 
-            const deleteSchedule = (scheduleId) => {
-                if (!confirm('Are you sure you want to delete this schedule?')) {
-                    return;
-                }
+    // ── Group ─────────────────────────────────────────────────────────────────
+    async function savePlayerGroup() {
+      if (!selectedPlayer.value) return
+      const g = groupNameEdit.value.trim()
+      if (g === (selectedPlayer.value.group_name || '')) return
+      await fetch(`/player/${selectedPlayerId.value}/group`, {
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({group_name: g || null})
+      })
+      await fetchPlayers()
+    }
+    function openGroupOverride(groupName) {
+      groupOverrideTarget.value = groupName
+      groupOverrideUrl.value = ''
+      groupOverrideUntil.value = ''
+      groupOverrideDlg.value.showModal()
+    }
+    async function setGroupOverride() {
+      await fetch(`/group/${encodeURIComponent(groupOverrideTarget.value)}/override`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({url: groupOverrideUrl.value, until: groupOverrideUntil.value || null})
+      })
+      await fetchPlayers()
+      groupOverrideDlg.value.close()
+    }
+    async function clearGroupOverride() {
+      await fetch(`/group/${encodeURIComponent(groupOverrideTarget.value)}/override`, {method:'DELETE'})
+      await fetchPlayers()
+      groupOverrideDlg.value.close()
+    }
 
-                fetch('schedule/' + scheduleId, {
-                    method: 'DELETE',
-                })
-                    .then(response => response.json())
-                    .then((data) => {
-                        selectedPlayer.value.schedules = selectedPlayer.value.schedules.filter(schedule => schedule.id !== scheduleId)
-                    })
-            }
+    // ── Override ──────────────────────────────────────────────────────────────
+    async function setOverride() {
+      await fetch(`/player/${selectedPlayerId.value}/override`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({url: overrideUrl.value, until: overrideUntil.value || null})
+      })
+      overrideUrl.value = ''; overrideUntil.value = ''
+      await fetchPlayers(); await fetchNowShowing(selectedPlayerId.value)
+    }
+    async function clearOverride() {
+      await fetch(`/player/${selectedPlayerId.value}/override`, {method:'DELETE'})
+      await fetchPlayers(); await fetchNowShowing(selectedPlayerId.value)
+    }
 
-            const selectedPlayer = computed(() => {
-                return players.value.find(player => player.id === selectedPlayerId.value) || null
-            })
+    // ── Schedule CRUD ─────────────────────────────────────────────────────────
+    function openCreateSchedule() {
+      editingSchedule.value = false
+      scheduleForm.value = {url:'', start_time:'', end_time:'', days:[]}
+      selectedTemplateId.value = ''; newTemplateName.value = ''
+      scheduleDlg.value.showModal()
+    }
+    function openEditSchedule(s) {
+      editingSchedule.value = true
+      scheduleForm.value = JSON.parse(JSON.stringify(s))
+      selectedTemplateId.value = ''; newTemplateName.value = ''
+      scheduleDlg.value.showModal()
+    }
+    async function saveSchedule() {
+      const f = scheduleForm.value
+      const endpoint = f.id ? `schedule/${f.id}` : `player/${selectedPlayerId.value}/schedule`
+      const res = await fetch(endpoint, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(f)
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error); return }
+      await fetchPlayers(); await fetchNowShowing(selectedPlayerId.value)
+      scheduleDlg.value.close()
+    }
+    async function deleteSchedule(id) {
+      if (!confirm('Delete this schedule?')) return
+      await fetch(`schedule/${id}`, {method:'DELETE'})
+      if (selectedPlayer.value)
+        selectedPlayer.value.schedules = selectedPlayer.value.schedules.filter(s => s.id !== id)
+      await fetchNowShowing(selectedPlayerId.value)
+    }
+    async function moveSchedule(scheduleId, direction) {
+      const scheds = selectedPlayer.value.schedules
+      const idx = scheds.findIndex(s => s.id === scheduleId)
+      if (direction === 'up' && idx === 0) return
+      if (direction === 'down' && idx === scheds.length - 1) return
+      const ordered = scheds.map(s => s.id)
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+      ;[ordered[idx], ordered[swapIdx]] = [ordered[swapIdx], ordered[idx]]
+      await fetch(`/player/${selectedPlayerId.value}/reorder-schedules`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({orderedIds: ordered})
+      })
+      await fetchPlayers()
+    }
+    async function copySchedulesFrom() {
+      if (!copyFromPlayerId.value) return
+      const res = await fetch(`/player/${selectedPlayerId.value}/copy-schedules-from/${copyFromPlayerId.value}`, {method:'POST'})
+      const data = await res.json()
+      if (!res.ok) { alert(data.error); return }
+      copyFromPlayerId.value = ''
+      await fetchPlayers()
+    }
 
-            const fetchPlayers = () => {
-                return fetch('/players')
-                    .then(response => response.json())
-                    .then((data) => {
-                        players.value = data
+    // ── Templates ─────────────────────────────────────────────────────────────
+    function applyTemplate() {
+      const t = templates.value.find(t => t.id === Number(selectedTemplateId.value))
+      if (!t) return
+      scheduleForm.value = {...scheduleForm.value, url: t.url, start_time: t.start_time, end_time: t.end_time, days: [...t.days]}
+    }
+    async function saveAsTemplate() {
+      if (!newTemplateName.value || !scheduleForm.value.url) return
+      const f = scheduleForm.value
+      const res = await fetch('/template', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name: newTemplateName.value, url: f.url, start_time: f.start_time, end_time: f.end_time, days: f.days})
+      })
+      const t = await res.json()
+      templates.value.push(t)
+      newTemplateName.value = ''
+    }
+    async function deleteTemplate(id) {
+      await fetch(`/template/${id}`, {method:'DELETE'})
+      templates.value = templates.value.filter(t => t.id !== id)
+    }
 
-                        return data
-                    })
-            }
+    // ── Audit log ─────────────────────────────────────────────────────────────
+    async function toggleAuditLog() {
+      showAuditLog.value = !showAuditLog.value
+      if (showAuditLog.value) await fetchAuditLog(selectedPlayerId.value)
+    }
 
-            fetchPlayers().then(data => {
-                if (data.length === 0) {
-                    return;
-                }
+    // ── System / auto-update ──────────────────────────────────────────────────
+    async function fetchFromGitHub() {
+      systemInfo.value = {...systemInfo.value, fetching: 'github', error: null, updated: null}
+      const res = await fetch('/system/fetch-from-github', {method:'POST'})
+      const data = await res.json()
+      if (!res.ok) {
+        systemInfo.value = {...systemInfo.value, fetching: false, error: data.error}
+      } else {
+        systemInfo.value = {...systemInfo.value, hash: data.hash, fetching: false, updated: 'Fetched ✓'}
+        setTimeout(() => { systemInfo.value = {...systemInfo.value, updated: null} }, 4000)
+      }
+    }
+    async function pushUpdateToPlayers() {
+      systemInfo.value = {...systemInfo.value, fetching: 'push', error: null, updated: null}
+      const res = await fetch('/system/push-update', {method:'POST'})
+      const data = await res.json()
+      if (!res.ok) {
+        systemInfo.value = {...systemInfo.value, fetching: false, error: data.error}
+      } else {
+        systemInfo.value = {...systemInfo.value, force: true, fetching: false, updated: 'Pushed ✓ — players update at next poll'}
+        setTimeout(() => { systemInfo.value = {...systemInfo.value, updated: null} }, 5000)
+      }
+    }
+    async function cancelPushUpdate() {
+      const res = await fetch('/system/push-update', {method:'DELETE'})
+      if (res.ok) systemInfo.value = {...systemInfo.value, force: false}
+    }
 
-                selectedPlayerId.value = data[0].id
-            })
+    // ── Watchers ──────────────────────────────────────────────────────────────
+    watch(selectedPlayerId, id => {
+      fetchNowShowing(id)
+      groupNameEdit.value = selectedPlayer.value?.group_name || ''
+      if (showAuditLog.value) fetchAuditLog(id)
+    })
+    watch(selectedPlayer, p => {
+      if (p) groupNameEdit.value = p.group_name || ''
+    })
 
-            const deletePlayer = (playerId) => {
-                if (!confirm('Are you sure you want to delete this player?')) {
-                    return;
-                }
+    // ── Init ──────────────────────────────────────────────────────────────────
+    fetchPlayers().then(data => {
+      if (players.value.length) {
+        selectedPlayerId.value = players.value[0].id
+        fetchNowShowing(players.value[0].id)
+      }
+    })
+    fetchTemplates()
+    fetchSystemInfo()
+    setInterval(async () => {
+      await fetchPlayers()
+      await fetchNowShowing(selectedPlayerId.value)
+    }, 30000)
 
-                fetch('player/' + playerId, {
-                    method: 'DELETE',
-                })
-                    .then(response => response.json())
-                    .then((data) => {
-                        players.value = players.value.filter(player => player.id !== playerId)
-                    })
-            }
-
-            const createPlayer = () => {
-                fetch('player', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        name: playerName.value,
-                    }),
-                })
-                    .then(async response => {
-                        if (!response.ok) {
-                            const res = await response.json()
-                            alert(res.error)
-                        }
-                        return response.json();
-                    })
-                    .then((data) => {
-                        players.value.push({
-                            schedules: [],
-                            ...data
-                        });
-                        playerName.value = '';
-                        createPlayerDialog.value.close();
-                    })
-                    .catch(error => {
-                        console.error('There was a problem with the fetch operation:', error);
-                    });
-            }
-
-            return {
-                createPlayerDialog,
-                createPlayer,
-                deletePlayer,
-                playerName,
-                players,
-
-                selectedPlayer,
-                selectedPlayerId,
-
-                createScheduleDialog,
-                editSchedule,
-                createSchedule,
-                deleteSchedule,
-                selectedSchedule,
-
-                getDayName,
-            }
-        }
-    }).mount('#app')
+    return {
+      players, selectedPlayerId, selectedPlayer, ungroupedPlayers, playerGroups, otherPlayers,
+      nowShowing, nowPercent, timelineSegments, timelineLegend,
+      overrideUrl, overrideUntil, setOverride, clearOverride,
+      newPlayerName, createPlayerDlg, openCreatePlayer, createPlayer, deletePlayer, selectPlayer,
+      scheduleDlg, scheduleForm, editingSchedule, openCreateSchedule, openEditSchedule, saveSchedule, deleteSchedule, moveSchedule,
+      copyFromPlayerId, copySchedulesFrom,
+      groupNameEdit, savePlayerGroup,
+      groupOverrideDlg, groupOverrideTarget, groupOverrideUrl, groupOverrideUntil,
+      openGroupOverride, setGroupOverride, clearGroupOverride,
+      templates, templatesDlg, selectedTemplateId, newTemplateName,
+      applyTemplate, saveAsTemplate, deleteTemplate,
+      showAuditLog, auditLog, toggleAuditLog,
+      systemInfo, fetchFromGitHub, pushUpdateToPlayers, cancelPushUpdate,
+      playerStatus, timeSince, formatDateTime, formatDays, auditDetail,
+    }
+  }
+}).mount('#app')
 </script>
 </body>
 </html>

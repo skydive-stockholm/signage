@@ -4,9 +4,10 @@ Minimal URL Player for Raspberry Pi
 - Pings API endpoint every minute
 - Updates browser when URL changes
 - Controls screen power via CEC
+- Auto-updates itself nightly at 04:00 or when admin pushes an update
 """
 
-import json
+import hashlib
 import time
 import os
 import signal
@@ -16,7 +17,7 @@ import sys
 import requests
 import logging
 import shutil
-from datetime import datetime
+from datetime import datetime, date
 
 # Configure logging
 logging.basicConfig(
@@ -29,19 +30,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("url-player")
 
-# Constants
-CHECK_INTERVAL = 60  # Check for new content every 60 seconds (1 minute)
+CHECK_INTERVAL = 60
+UPDATE_HOUR = 4  # Check for updates nightly at 04:00
 BASE_URL = "http://192.168.55.52:3030"
 HOSTNAME = socket.gethostname()
 BROWSER_PID_FILE = os.path.expanduser("~/browser.pid")
 
-# Check if CEC is available
 CEC_AVAILABLE = shutil.which('cec-client') is not None
-
-# Detect chromium binary name (Raspberry Pi OS Bookworm+ uses 'chromium', older used 'chromium-browser')
 CHROMIUM_BIN = shutil.which('chromium') or shutil.which('chromium-browser') or 'chromium'
 
-# RPi 1 and 2 use VideoCore IV which doesn't support GLES 3.0 — needs software rendering
 def _pi_has_gpu():
     try:
         with open('/proc/device-tree/model') as f:
@@ -59,8 +56,55 @@ if CEC_AVAILABLE:
 else:
     logger.warning("CEC client not available - screen power control disabled")
 
+def self_hash():
+    try:
+        with open(os.path.abspath(__file__), 'rb') as f:
+            return hashlib.sha256(f.read()).hexdigest()[:16]
+    except Exception:
+        return None
+
+def check_and_apply_update(current_hash, last_check_date):
+    """Check server for a newer player script and apply if available.
+
+    Triggers when the server has force=true (admin push) or at UPDATE_HOUR daily.
+    Returns (current_hash, last_check_date) — updated on a successful check.
+    """
+    try:
+        resp = requests.get(f"{BASE_URL}/system/player-version", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        server_hash = data.get('hash')
+        force = data.get('force', False)
+
+        now = datetime.now()
+        today = now.date()
+        is_update_hour = now.hour == UPDATE_HOUR and last_check_date != today
+
+        if not force and not is_update_hour:
+            return current_hash, last_check_date
+
+        if not server_hash or server_hash == current_hash:
+            return current_hash, today
+
+        logger.info(f"Update available ({current_hash} → {server_hash}), reason: {'forced' if force else 'nightly'}. Downloading...")
+        script_resp = requests.get(f"{BASE_URL}/system/player-script", timeout=30)
+        script_resp.raise_for_status()
+
+        script_path = os.path.abspath(__file__)
+        tmp_path = script_path + '.new'
+        with open(tmp_path, 'w') as f:
+            f.write(script_resp.text)
+        os.chmod(tmp_path, 0o755)
+        os.replace(tmp_path, script_path)
+
+        logger.info("Update applied — restarting...")
+        close_browser()
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    except Exception as e:
+        logger.warning(f"Update check failed: {e}")
+    return current_hash, last_check_date
+
 def get_hdmi_output():
-    """Return the connected xrandr output name, or None if not found"""
     try:
         result = subprocess.run(['xrandr'], capture_output=True, text=True, check=True)
         for line in result.stdout.splitlines():
@@ -71,16 +115,16 @@ def get_hdmi_output():
     return None
 
 def turn_screen_on():
-    """Turn the connected HDMI display on using CEC and xrandr"""
     if not CEC_AVAILABLE:
         logger.warning("Attempted to turn screen on, but CEC client is not available")
         return False
-
     try:
         output = get_hdmi_output()
         if output:
             subprocess.run(['xrandr', '--output', output, '--auto'], check=True)
         subprocess.run('echo "on 0" | cec-client -s -d 1', shell=True, check=True)
+        time.sleep(2)
+        subprocess.run('echo "as" | cec-client -s -d 1', shell=True, check=True)
         logger.info("Screen turned ON via CEC")
         return True
     except subprocess.CalledProcessError as e:
@@ -88,11 +132,9 @@ def turn_screen_on():
         return False
 
 def turn_screen_off():
-    """Turn the connected HDMI display off using CEC and xrandr"""
     if not CEC_AVAILABLE:
         logger.warning("Attempted to turn screen off, but CEC client is not available")
         return False
-
     try:
         subprocess.run('echo "standby 0" | cec-client -s -d 1', shell=True, check=True)
         output = get_hdmi_output()
@@ -105,7 +147,6 @@ def turn_screen_off():
         return False
 
 def get_current_url():
-    """Get the current URL from the endpoint using hostname"""
     try:
         endpoint = f"{BASE_URL}/player/{HOSTNAME}"
         logger.info(f"Checking endpoint: {endpoint}")
@@ -119,12 +160,8 @@ def get_current_url():
         return None
 
 def launch_browser(url):
-    """Launch Chromium browser with the specified URL"""
     try:
-        # Close any existing browser first
         close_browser()
-
-        # Launch chromium with kiosk settings
         browser_cmd = [
             CHROMIUM_BIN, url,
             "--window-size=1920,1080",
@@ -144,12 +181,9 @@ def launch_browser(url):
         ]
         if not GPU_ACCELERATION:
             browser_cmd += ["--disable-gpu", "--no-gl-override"]
-
-        # Launch browser as a subprocess and save the PID
         process = subprocess.Popen(browser_cmd)
         with open(BROWSER_PID_FILE, 'w') as f:
             f.write(str(process.pid))
-
         logger.info(f"Launched browser with URL: {url} (PID: {process.pid})")
         return True
     except Exception as e:
@@ -157,9 +191,7 @@ def launch_browser(url):
         return False
 
 def close_browser():
-    """Close any running browser instances"""
     try:
-        # Try to kill by PID file first
         if os.path.exists(BROWSER_PID_FILE):
             with open(BROWSER_PID_FILE, 'r') as f:
                 pid = int(f.read().strip())
@@ -168,53 +200,45 @@ def close_browser():
                 logger.info(f"Closed browser with PID: {pid}")
             except ProcessLookupError:
                 logger.info(f"Browser process {pid} not found")
-
-        # As a fallback, kill all chromium processes
         subprocess.run("pkill -o chromium", shell=True)
-
         if os.path.exists(BROWSER_PID_FILE):
             os.remove(BROWSER_PID_FILE)
-
         return True
     except Exception as e:
         logger.error(f"Error closing browser: {e}")
         return False
 
 def main():
-    """Main function of the player"""
     try:
         logger.info(f"Starting Minimal URL Player with hostname: {HOSTNAME}")
 
         current_url = None
-        screen_on = None  # unknown at startup; first poll always syncs state
+        screen_on = None
+        current_hash = self_hash()
+        last_update_check_date = None
 
         while True:
+            current_hash, last_update_check_date = check_and_apply_update(current_hash, last_update_check_date)
+
             new_url = get_current_url()
 
             if new_url:
-                # URL found - turn on screen if needed and display
                 if not screen_on and CEC_AVAILABLE:
                     screen_on = turn_screen_on()
-
-                # If URL changed, update the browser
                 if new_url != current_url:
                     logger.info(f"New URL detected: {new_url}")
                     launch_browser(new_url)
                     current_url = new_url
             else:
-                # No URL - turn off screen and close browser
                 if screen_on is not False and CEC_AVAILABLE:
                     close_browser()
                     screen_on = not turn_screen_off()
                     current_url = None
                 elif current_url is not None:
-                    # No screen control but browser is open - close it
                     close_browser()
                     current_url = None
-
                 logger.warning("No URL received from endpoint - screen turned off")
 
-            # Wait before checking again
             time.sleep(CHECK_INTERVAL)
 
     except KeyboardInterrupt:

@@ -2,7 +2,7 @@ const { getDb} = require('./database');
 
 const schedulesForPlayer = (playerId) => {
     const db = getDb()
-    return db.all('SELECT * FROM schedules WHERE player_id = ?', playerId);
+    return db.all('SELECT * FROM schedules WHERE player_id = ? ORDER BY priority DESC, id ASC', playerId);
 }
 
 const getPlayerByName = (playerName) => {
