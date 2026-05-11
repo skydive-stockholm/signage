@@ -30,7 +30,7 @@ apt-get install --no-install-recommends -y \
   xserver-xorg-core \
   xinit \
   x11-xserver-utils \
-  chromium-browser \
+  chromium \
   unclutter \
   python3 \
   python3-requests \

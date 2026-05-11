@@ -37,6 +37,9 @@ BROWSER_PID_FILE = os.path.expanduser("~/browser.pid")
 
 # Check if CEC is available
 CEC_AVAILABLE = shutil.which('cec-client') is not None
+
+# Detect chromium binary name (Raspberry Pi OS Bookworm+ uses 'chromium', older used 'chromium-browser')
+CHROMIUM_BIN = shutil.which('chromium') or shutil.which('chromium-browser') or 'chromium'
 if CEC_AVAILABLE:
     logger.info("CEC client is available - screen power control enabled")
 else:
@@ -92,7 +95,7 @@ def launch_browser(url):
 
         # Launch chromium with kiosk settings
         browser_cmd = [
-            "chromium-browser", url,
+            CHROMIUM_BIN, url,
             "--window-size=1920,1080",
             "--window-position=0,0",
             "--start-fullscreen",
