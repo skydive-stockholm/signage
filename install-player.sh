@@ -80,6 +80,21 @@ EOF
 chmod +x /home/pi/.xinitrc
 chown pi:pi /home/pi/.xinitrc
 
+# On RPi 1/2, disable Glamor (X GPU acceleration) — VC4 V3D 2.1 renders to an
+# offscreen buffer instead of the display framebuffer, causing a black screen
+PI_MODEL=$(cat /proc/device-tree/model 2>/dev/null || true)
+if echo "$PI_MODEL" | grep -qE "Raspberry Pi [12] "; then
+    echo "RPi 1/2 detected — disabling Glamor in Xorg..."
+    mkdir -p /etc/X11/xorg.conf.d
+    cat > /etc/X11/xorg.conf.d/20-noglamor.conf << 'XEOF'
+Section "Device"
+    Identifier "modesetting"
+    Driver "modesetting"
+    Option "AccelMethod" "none"
+EndSection
+XEOF
+fi
+
 # Configure raspi-config for console autologin
 echo "Configuring system for console autologin..."
 raspi-config nonint do_boot_behaviour B2
