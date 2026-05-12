@@ -18,25 +18,57 @@ if [ "$(id -u)" -ne 0 ]; then
     error "This script must be run as root. Try 'sudo $0'"
 fi
 
+# Detect old Pi up-front — model strings on Pi 1 A/B/A+/B+ omit a digit
+# ("Raspberry Pi Model B Plus"), so match modern Pis positively and treat
+# everything else as old. Affects:
+#  - Chromium choice: Pi 1 / Zero (ARMv6) lacks NEON; current Chromium builds
+#    require NEON and segfault. Install legacy Buster Chromium 92 instead.
+#  - Xorg Glamor: VC4 V3D 2.1 (Pi 1/2) renders to an offscreen buffer with
+#    Glamor enabled, causing a black screen — disable it.
+PI_MODEL=$(cat /proc/device-tree/model 2>/dev/null || true)
+case "$PI_MODEL" in
+    *"Raspberry Pi 3"*|*"Raspberry Pi 4"*|*"Raspberry Pi 5"*|*"Raspberry Pi 400"*|*"Raspberry Pi Zero 2"*|*"Raspberry Pi Compute Module 3"*|*"Raspberry Pi Compute Module 4"*|*"Raspberry Pi Compute Module 5"*)
+        OLD_PI=0 ;;
+    *)
+        OLD_PI=1 ;;
+esac
+
 # Update package list
 echo "Updating package list..."
 apt-get update -qq || error "Failed to update package list"
 
-# Install minimal necessary packages as per tutorial
+# Install minimal necessary packages. Modern Pis get the current Chromium
+# from the system repos; old Pis get legacy Chromium installed separately
+# below (the current build won't run on their CPUs).
+COMMON_PKGS="xserver-xorg-video-all xserver-xorg-input-all xserver-xorg-core xinit x11-xserver-utils unclutter python3 python3-requests cec-utils fonts-noto-color-emoji"
 echo "Installing minimal necessary packages..."
-apt-get install --no-install-recommends -y \
-  xserver-xorg-video-all \
-  xserver-xorg-input-all \
-  xserver-xorg-core \
-  xinit \
-  x11-xserver-utils \
-  chromium \
-  unclutter \
-  python3 \
-  python3-requests \
-  cec-utils \
-  fonts-noto-color-emoji \
-  || error "Failed to install necessary packages"
+if [ "$OLD_PI" = "1" ]; then
+    apt-get install --no-install-recommends -y $COMMON_PKGS \
+        || error "Failed to install necessary packages"
+else
+    apt-get install --no-install-recommends -y $COMMON_PKGS chromium \
+        || error "Failed to install necessary packages"
+fi
+
+# On old Pi, install legacy Chromium 92 from Raspbian Buster archive. Current
+# Chromium needs NEON which ARMv6 (Pi 1 / original Zero) lacks; even Bullseye's
+# Chromium 106 segfaults on the original Pi 1's BCM2835. v92 is the newest one
+# known to actually launch on these boards. Held to block apt upgrades.
+if [ "$OLD_PI" = "1" ]; then
+    echo "Old Raspberry Pi detected — installing legacy Chromium 92 from Buster..."
+    CHROMIUM_VER="92.0.4515.98~buster-rpt2"
+    BASE="http://archive.raspberrypi.org/debian/pool/main/c/chromium-browser"
+    cd /tmp
+    wget -q "$BASE/chromium-browser_${CHROMIUM_VER}_armhf.deb" \
+        || error "Failed to download legacy chromium-browser"
+    wget -q "$BASE/chromium-codecs-ffmpeg-extra_${CHROMIUM_VER}_armhf.deb" \
+        || error "Failed to download legacy chromium codecs"
+    apt-get install -y \
+        "./chromium-codecs-ffmpeg-extra_${CHROMIUM_VER}_armhf.deb" \
+        "./chromium-browser_${CHROMIUM_VER}_armhf.deb" \
+        || error "Failed to install legacy chromium"
+    apt-mark hold chromium-browser chromium-codecs-ffmpeg-extra
+fi
 
 # Check if cec-client is available
 echo "Checking CEC availability..."
@@ -80,20 +112,10 @@ EOF
 chmod +x /home/pi/.xinitrc
 chown pi:pi /home/pi/.xinitrc
 
-# On old Pis (Pi 1 A/B/A+/B+, Pi 2, original Pi Zero, CM1), disable Glamor (X
-# GPU acceleration) — VC4 V3D 2.1 renders to an offscreen buffer instead of the
-# display framebuffer, causing a black screen. Their model strings often omit a
-# digit ("Raspberry Pi Model B Plus", "Raspberry Pi Zero W"), so match modern
-# Pis positively and treat everything else as old.
-PI_MODEL=$(cat /proc/device-tree/model 2>/dev/null || true)
-case "$PI_MODEL" in
-    *"Raspberry Pi 3"*|*"Raspberry Pi 4"*|*"Raspberry Pi 5"*|*"Raspberry Pi 400"*|*"Raspberry Pi Zero 2"*|*"Raspberry Pi Compute Module 3"*|*"Raspberry Pi Compute Module 4"*|*"Raspberry Pi Compute Module 5"*)
-        OLD_PI=0 ;;
-    *)
-        OLD_PI=1 ;;
-esac
+# On old Pis (VC4 V3D 2.1: Pi 1/2/original Zero), disable Glamor — without
+# this, Xorg renders to an offscreen buffer and the screen stays black.
 if [ "$OLD_PI" = "1" ]; then
-    echo "Old Raspberry Pi detected — disabling Glamor in Xorg..."
+    echo "Disabling Glamor in Xorg for old Pi..."
     mkdir -p /etc/X11/xorg.conf.d
     cat > /etc/X11/xorg.conf.d/20-noglamor.conf << 'XEOF'
 Section "Device"
