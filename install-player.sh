@@ -18,6 +18,10 @@ if [ "$(id -u)" -ne 0 ]; then
     error "This script must be run as root. Try 'sudo $0'"
 fi
 
+# Set timezone so cron reboots and player auto-update fire at the right local hour
+echo "Setting timezone to Europe/Stockholm..."
+timedatectl set-timezone Europe/Stockholm || error "Failed to set timezone"
+
 # Detect old Pi up-front — model strings on Pi 1 A/B/A+/B+ omit a digit
 # ("Raspberry Pi Model B Plus"), so match modern Pis positively and treat
 # everything else as old. Affects:
