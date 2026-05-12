@@ -39,17 +39,33 @@ BROWSER_PID_FILE = os.path.expanduser("~/browser.pid")
 CEC_AVAILABLE = shutil.which('cec-client') is not None
 CHROMIUM_BIN = shutil.which('chromium') or shutil.which('chromium-browser') or 'chromium'
 
+# Pi 1 / Pi 2 / original Pi Zero have VC4 V3D 2.1, which renders to an offscreen
+# buffer instead of the display framebuffer — causing a black screen under Xorg
+# with Glamor or Chromium with GPU acceleration. Their model strings often omit
+# a digit ("Raspberry Pi Model B Plus", "Raspberry Pi Zero W"), so match modern
+# Pis positively rather than trying to enumerate the old ones.
+_MODERN_PI_MARKERS = (
+    'Raspberry Pi 3',
+    'Raspberry Pi 4',
+    'Raspberry Pi 5',
+    'Raspberry Pi 400',
+    'Raspberry Pi Zero 2',
+    'Raspberry Pi Compute Module 3',
+    'Raspberry Pi Compute Module 4',
+    'Raspberry Pi Compute Module 5',
+)
+
 def _pi_has_gpu():
     try:
         with open('/proc/device-tree/model') as f:
             model = f.read()
-        return 'Raspberry Pi 1' not in model and 'Raspberry Pi 2' not in model
+        return any(m in model for m in _MODERN_PI_MARKERS)
     except Exception:
         return True
 
 GPU_ACCELERATION = _pi_has_gpu()
 if not GPU_ACCELERATION:
-    logger.info("RPi 1/2 detected — GPU acceleration disabled, using software rendering")
+    logger.info("Old Raspberry Pi detected — GPU acceleration disabled, using software rendering")
 
 if CEC_AVAILABLE:
     logger.info("CEC client is available - screen power control enabled")

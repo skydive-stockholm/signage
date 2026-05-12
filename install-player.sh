@@ -80,11 +80,20 @@ EOF
 chmod +x /home/pi/.xinitrc
 chown pi:pi /home/pi/.xinitrc
 
-# On RPi 1/2, disable Glamor (X GPU acceleration) — VC4 V3D 2.1 renders to an
-# offscreen buffer instead of the display framebuffer, causing a black screen
+# On old Pis (Pi 1 A/B/A+/B+, Pi 2, original Pi Zero, CM1), disable Glamor (X
+# GPU acceleration) — VC4 V3D 2.1 renders to an offscreen buffer instead of the
+# display framebuffer, causing a black screen. Their model strings often omit a
+# digit ("Raspberry Pi Model B Plus", "Raspberry Pi Zero W"), so match modern
+# Pis positively and treat everything else as old.
 PI_MODEL=$(cat /proc/device-tree/model 2>/dev/null || true)
-if echo "$PI_MODEL" | grep -qE "Raspberry Pi [12] "; then
-    echo "RPi 1/2 detected — disabling Glamor in Xorg..."
+case "$PI_MODEL" in
+    *"Raspberry Pi 3"*|*"Raspberry Pi 4"*|*"Raspberry Pi 5"*|*"Raspberry Pi 400"*|*"Raspberry Pi Zero 2"*|*"Raspberry Pi Compute Module 3"*|*"Raspberry Pi Compute Module 4"*|*"Raspberry Pi Compute Module 5"*)
+        OLD_PI=0 ;;
+    *)
+        OLD_PI=1 ;;
+esac
+if [ "$OLD_PI" = "1" ]; then
+    echo "Old Raspberry Pi detected — disabling Glamor in Xorg..."
     mkdir -p /etc/X11/xorg.conf.d
     cat > /etc/X11/xorg.conf.d/20-noglamor.conf << 'XEOF'
 Section "Device"
